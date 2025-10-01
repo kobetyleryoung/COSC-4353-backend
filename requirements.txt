@@ -1,0 +1,7 @@
+fastapi==0.115.11
+uvicorn==0.24.0.post1
+pydantic==2.10.6
+pydantic_core==2.27.2
+pydantic-settings==2.8.1
+typing_extensions==4.12.2
+colorlog==6.9.0
