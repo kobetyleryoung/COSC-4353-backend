@@ -25,7 +25,7 @@ router = APIRouter(prefix="/volunteer-history", tags=["volunteer-history"])
 # per instance
 @lru_cache(maxsize=1)
 def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService()
+    return VolunteerHistoryService(logger)
 
 
 def _convert_history_entry_to_response(entry) -> HistoryEntryResponseSchema:

@@ -2,16 +2,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import uuid4
+from logging import Logger
 
 from src.domain.events import Event, EventId, EventStatus, Location
 from src.domain.users import UserId
-from config.logging_config import logger
 
 
 class EventManagementService:
     """Service for managing events and volunteer opportunities."""
     
-    def __init__(self):
+    def __init__(self, logger: Logger):
+        self._logger = logger
         # Hard-coded data storage (no database implementation)
         self._events: dict[str, Event] = {}
         self._initialize_sample_data()
@@ -81,7 +82,7 @@ class EventManagementService:
         )
         self._events[str(event3_id.value)] = event3
         
-        logger.info(f"Initialized {len(self._events)} sample events")
+        self._logger.info(f"Initialized {len(self._events)} sample events")
     
     def create_event(
         self,
@@ -135,7 +136,7 @@ class EventManagementService:
         )
         
         self._events[str(event_id.value)] = event
-        logger.info(f"Created new event: {title} (ID: {event_id.value})")
+        self._logger.info(f"Created new event: {title} (ID: {event_id.value})")
         
         return event
     
@@ -243,7 +244,7 @@ class EventManagementService:
         if status is not None:
             event.status = status
         
-        logger.info(f"Updated event: {event.title} (ID: {event_id.value})")
+        self._logger.info(f"Updated event: {event.title} (ID: {event_id.value})")
         return event
     
     def publish_event(self, event_id: EventId) -> bool:
@@ -256,7 +257,7 @@ class EventManagementService:
             raise ValueError("Cannot publish a cancelled event")
         
         event.status = EventStatus.PUBLISHED
-        logger.info(f"Published event: {event.title} (ID: {event_id.value})")
+        self._logger.info(f"Published event: {event.title} (ID: {event_id.value})")
         return True
     
     def cancel_event(self, event_id: EventId) -> bool:
@@ -266,7 +267,7 @@ class EventManagementService:
             return False
         
         event.status = EventStatus.CANCELLED
-        logger.info(f"Cancelled event: {event.title} (ID: {event_id.value})")
+        self._logger.info(f"Cancelled event: {event.title} (ID: {event_id.value})")
         return True
     
     def delete_event(self, event_id: EventId) -> bool:
@@ -275,7 +276,7 @@ class EventManagementService:
             return False
         
         event = self._events.pop(str(event_id.value))
-        logger.info(f"Deleted event: {event.title} (ID: {event_id.value})")
+        self._logger.info(f"Deleted event: {event.title} (ID: {event_id.value})")
         return True
     
     def get_events_with_capacity(self, enrolled_counts: dict[str, int]) -> List[Event]:

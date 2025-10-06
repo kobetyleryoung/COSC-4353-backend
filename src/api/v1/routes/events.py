@@ -24,7 +24,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 # per instance
 @lru_cache(maxsize=1) 
 def _get_event_service() -> EventManagementService:
-    return EventManagementService()
+    return EventManagementService(logger)
 
 def _convert_location_to_schema(location) -> Optional[LocationSchema]:
     """Convert Location domain model to LocationSchema"""

@@ -28,11 +28,11 @@ router = APIRouter(prefix="/volunteer-matching", tags=["volunteer-matching"])
 # per instance
 @lru_cache(maxsize=1)
 def _get_matching_service() -> VolunteerMatchingService:
-    return VolunteerMatchingService()
+    return VolunteerMatchingService(logger)
 
 @lru_cache(maxsize=1)
 def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService()
+    return ProfileManagementService(logger)
 
 
 def _convert_opportunity_to_response(opportunity) -> OpportunityResponseSchema:

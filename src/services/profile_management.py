@@ -2,16 +2,19 @@ from __future__ import annotations
 from datetime import datetime, time
 from typing import List, Optional
 from uuid import uuid4
+from logging import Logger
+
+from fastapi import logger
 
 from src.domain.profiles import Profile, AvailabilityWindow, Skill
 from src.domain.users import UserId
-from config.logging_config import logger
 
 
 class ProfileManagementService:
     """Service for managing user profiles including location, skills, preferences, and availability."""
     
-    def __init__(self):
+    def __init__(self, logger: Logger):
+        self._logger = logger
         # Hard-coded data storage (no database implementation)
         self._profiles: dict[str, Profile] = {}
         self._initialize_sample_data()
@@ -69,7 +72,7 @@ class ProfileManagementService:
         )
         self._profiles[str(user3_id.value)] = profile3
         
-        logger.info(f"Initialized {len(self._profiles)} sample profiles")
+        self._logger.info(f"Initialized {len(self._profiles)} sample profiles")
     
     def create_profile(
         self,
@@ -120,7 +123,7 @@ class ProfileManagementService:
         )
         
         self._profiles[str(user_id.value)] = profile
-        logger.info(f"Created profile for user: {display_name} (ID: {user_id.value})")
+        self._logger.info(f"Created profile for user: {display_name} (ID: {user_id.value})")
         
         return profile
     
@@ -178,7 +181,7 @@ class ProfileManagementService:
             profile.availability = availability
         
         profile.updated_at = datetime.now()
-        logger.info(f"Updated profile for user: {profile.display_name} (ID: {user_id.value})")
+        self._logger.info(f"Updated profile for user: {profile.display_name} (ID: {user_id.value})")
         
         return profile
     
@@ -200,8 +203,7 @@ class ProfileManagementService:
         
         profile.skills.append(skill)
         profile.updated_at = datetime.now()
-        logger.info(f"Added skill '{skill}' to user {user_id.value}")
-        
+        self._logger.info(f"Added skill '{skill}' to user {user_id.value}")
         return True
     
     def remove_skill(self, user_id: UserId, skill: Skill) -> bool:
@@ -213,7 +215,7 @@ class ProfileManagementService:
         if skill in profile.skills:
             profile.skills.remove(skill)
             profile.updated_at = datetime.now()
-            logger.info(f"Removed skill '{skill}' from user {user_id.value}")
+            self._logger.info(f"Removed skill '{skill}' from user {user_id.value}")
             return True
         
         return False
@@ -236,7 +238,7 @@ class ProfileManagementService:
         
         profile.tags.append(tag)
         profile.updated_at = datetime.now()
-        logger.info(f"Added tag '{tag}' to user {user_id.value}")
+        self._logger.info(f"Added tag '{tag}' to user {user_id.value}")
         
         return True
     
@@ -250,7 +252,7 @@ class ProfileManagementService:
         if tag in profile.tags:
             profile.tags.remove(tag)
             profile.updated_at = datetime.now()
-            logger.info(f"Removed tag '{tag}' from user {user_id.value}")
+            self._logger.info(f"Removed tag '{tag}' from user {user_id.value}")
             return True
         
         return False
@@ -272,7 +274,7 @@ class ProfileManagementService:
         
         profile.availability.append(window)
         profile.updated_at = datetime.now()
-        logger.info(f"Added availability window to user {user_id.value}")
+        self._logger.info(f"Added availability window to user {user_id.value}")
         
         return True
     
@@ -288,7 +290,7 @@ class ProfileManagementService:
                 existing_window.end == window.end):
                 profile.availability.pop(i)
                 profile.updated_at = datetime.now()
-                logger.info(f"Removed availability window from user {user_id.value}")
+                self._logger.info(f"Removed availability window from user {user_id.value}")
                 return True
         
         return False
@@ -337,7 +339,7 @@ class ProfileManagementService:
             return False
         
         profile = self._profiles.pop(str(user_id.value))
-        logger.info(f"Deleted profile for user: {profile.display_name} (ID: {user_id.value})")
+        self._logger.info(f"Deleted profile for user: {profile.display_name} (ID: {user_id.value})")
         return True
     
     def _validate_phone(self, phone: str) -> bool:

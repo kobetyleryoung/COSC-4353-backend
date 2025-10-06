@@ -1,18 +1,20 @@
 from __future__ import annotations
+from asyncio.log import logger
 from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import uuid4
+from logging import Logger
 
 from src.domain.volunteering import VolunteerHistoryEntry, VolunteerHistoryEntryId, Role
 from src.domain.events import EventId
 from src.domain.users import UserId
-from config.logging_config import logger
 
 
 class VolunteerHistoryService:
     """Service for tracking and displaying volunteer participation history."""
     
-    def __init__(self):
+    def __init__(self, logger: Logger):
+        self._logger = logger
         # Hard-coded data storage (no database implementation)
         self._history_entries: dict[str, VolunteerHistoryEntry] = {}
         self._initialize_sample_data()
@@ -78,7 +80,7 @@ class VolunteerHistoryService:
         )
         self._history_entries[str(entry4_id.value)] = entry4
         
-        logger.info(f"Initialized {len(self._history_entries)} sample volunteer history entries")
+        self._logger.info(f"Initialized {len(self._history_entries)} sample volunteer history entries")
     
     def create_history_entry(
         self,
@@ -125,7 +127,7 @@ class VolunteerHistoryService:
         )
         
         self._history_entries[str(entry_id.value)] = entry
-        logger.info(f"Created history entry for user {user_id.value}, event {event_id.value}")
+        self._logger.info(f"Created history entry for user {user_id.value}, event {event_id.value}")
         
         return entry
     
@@ -269,7 +271,7 @@ class VolunteerHistoryService:
                 raise ValueError("Notes must be 1000 characters or less")
             entry.notes = notes.strip() if notes else None
         
-        logger.info(f"Updated history entry {entry_id.value}")
+        self._logger.info(f"Updated history entry {entry_id.value}")
         return entry
     
     def delete_history_entry(self, entry_id: VolunteerHistoryEntryId) -> bool:
@@ -278,7 +280,7 @@ class VolunteerHistoryService:
             return False
         
         entry = self._history_entries.pop(str(entry_id.value))
-        logger.info(f"Deleted history entry {entry_id.value} for user {entry.user_id.value}")
+        self._logger.info(f"Deleted history entry {entry_id.value} for user {entry.user_id.value}")
         return True
     
     def get_volunteer_statistics(self, user_id: UserId) -> dict:

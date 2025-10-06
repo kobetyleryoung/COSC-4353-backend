@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
+from logging import Logger
 
 from src.domain.volunteering import (
     Opportunity, OpportunityId, MatchRequest, MatchRequestId, 
@@ -10,7 +11,6 @@ from src.domain.volunteering import (
 from src.domain.events import EventId
 from src.domain.users import UserId
 from src.domain.profiles import Profile
-from config.logging_config import logger
 
 
 @dataclass
@@ -26,7 +26,8 @@ class MatchScore:
 class VolunteerMatchingService:
     """Service for matching volunteers to events based on their profiles and event requirements."""
     
-    def __init__(self):
+    def __init__(self, logger: Logger) -> None:
+        self._logger = logger
         # Hard-coded data storage (no database implementation)
         self._opportunities: dict[str, Opportunity] = {}
         self._match_requests: dict[str, MatchRequest] = {}
@@ -75,7 +76,7 @@ class VolunteerMatchingService:
         )
         self._opportunities[str(opp3_id.value)] = opportunity3
         
-        logger.info(f"Initialized {len(self._opportunities)} sample opportunities")
+        self._logger.info(f"Initialized {len(self._opportunities)} sample opportunities")
     
     def create_opportunity(
         self,
@@ -115,7 +116,7 @@ class VolunteerMatchingService:
         )
         
         self._opportunities[str(opportunity_id.value)] = opportunity
-        logger.info(f"Created opportunity: {title} for event {event_id.value}")
+        self._logger.info(f"Created opportunity: {title} for event {event_id.value}")
         
         return opportunity
     
@@ -161,7 +162,7 @@ class VolunteerMatchingService:
         )
         
         self._match_requests[str(request_id.value)] = match_request
-        logger.info(f"Created match request for user {user_id.value} to opportunity {opportunity_id.value}")
+        self._logger.info(f"Created match request for user {user_id.value} to opportunity {opportunity_id.value}")
         
         return match_request
     
@@ -285,7 +286,7 @@ class VolunteerMatchingService:
         )
         
         self._matches[str(match_id.value)] = match
-        logger.info(f"Approved match request {request_id.value}, created match {match_id.value}")
+        self._logger.info(f"Approved match request {request_id.value}, created match {match_id.value}")
         
         return match
     
@@ -299,7 +300,7 @@ class VolunteerMatchingService:
             raise ValueError("Can only reject pending match requests")
         
         request.status = MatchStatus.REJECTED
-        logger.info(f"Rejected match request {request_id.value}")
+        self._logger.info(f"Rejected match request {request_id.value}")
         
         return True
     
@@ -348,7 +349,7 @@ class VolunteerMatchingService:
                 request.status = MatchStatus.REJECTED
                 break
         
-        logger.info(f"Cancelled match {match_id.value}")
+        self._logger.info(f"Cancelled match {match_id.value}")
         return True
     
     def expire_old_requests(self, days_old: int = 30) -> int:
@@ -362,7 +363,7 @@ class VolunteerMatchingService:
                 request.status = MatchStatus.EXPIRED
                 expired_count += 1
         
-        logger.info(f"Expired {expired_count} old match requests")
+        self._logger.info(f"Expired {expired_count} old match requests")
         return expired_count
     
     def _calculate_skill_match_score(self, profile_skills: List[str], required_skills: List[str]) -> float:

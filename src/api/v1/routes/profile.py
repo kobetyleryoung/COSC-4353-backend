@@ -25,12 +25,12 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 # per instance
 @lru_cache(maxsize=1) 
 def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService()
+    return ProfileManagementService(logger)
 
 #TODO: see above todo
 @lru_cache(maxsize=1) 
 def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService()
+    return VolunteerHistoryService(logger)
 
 
 def _convert_availability_schema_to_domain(availability_schema: AvailabilityWindowSchema) -> AvailabilityWindow:

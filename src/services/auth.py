@@ -11,11 +11,7 @@ JWKS_URL = f"{ISSUER}.well-known/jwks.json"
 ALGORITHMS = [settings.AUTH0_ALGORITHM]
 jwk_client = PyJWKClient(JWKS_URL)
 
-# custom exception for forbidden access inherited from HTTPException
-class Forbidden(HTTPException):
-    def __init__(self, detail="Insufficient permissions"):
-        super().__init__(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
-        
+
 #TODO: cleanup, make sure issuer is good. May move the global vars somewhere else and inject them
 # into AuthProvider
 class AuthProvider:
@@ -49,7 +45,10 @@ class AuthProvider:
             if not perms and (scope := payload.get("scope")):
                 perms = set(scope.split())
             if not set(required).issubset(perms):
-                raise Forbidden()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing required permissions"
+                )
             return payload
         return dep
     

@@ -2,12 +2,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from enum import Enum
+from logging import Logger
 
 from src.domain.notifications import (
     Notification, NotificationId, NotificationChannel, NotificationStatus
 )
 from src.domain.users import UserId
-from config.logging_config import logger
 
 
 class NotificationType(Enum):
@@ -25,7 +25,8 @@ class NotificationType(Enum):
 class NotificationService:
     """Service for sending notifications to volunteers for event assignments, updates, and reminders."""
     
-    def __init__(self):
+    def __init__(self, logger: Logger) -> None:
+        self._logger = logger
         # Hard-coded data storage (no database implementation)
         self._notifications: dict[str, Notification] = {}
         self._user_preferences: dict[str, Dict[NotificationChannel, bool]] = {}
@@ -92,7 +93,7 @@ class NotificationService:
             NotificationChannel.IN_APP: True
         }
         
-        logger.info(f"Initialized {len(self._notifications)} sample notifications")
+        self._logger.info(f"Initialized {len(self._notifications)} sample notifications")
     
     def send_notification(
         self,
@@ -124,7 +125,7 @@ class NotificationService:
         
         # Check if user has enabled this channel
         if not self._is_channel_enabled(recipient, channel):
-            logger.warning(f"Channel {channel.name} is disabled for user {recipient.value}")
+            self._logger.warning(f"Channel {channel.name} is disabled for user {recipient.value}")
             # Fall back to IN_APP if available
             if self._is_channel_enabled(recipient, NotificationChannel.IN_APP):
                 channel = NotificationChannel.IN_APP
@@ -148,7 +149,7 @@ class NotificationService:
         # Simulate sending (in real implementation, this would integrate with email/SMS services)
         self._process_notification(notification)
         
-        logger.info(f"Sent {notification_type.value} notification to user {recipient.value}")
+        self._logger.info(f"Sent {notification_type.value} notification to user {recipient.value}")
         return notification
     
     def send_event_assignment_notification(
@@ -363,7 +364,7 @@ class NotificationService:
         
         # For demo purposes, we'll just log this
         # In real implementation, you'd update a "read" status
-        logger.info(f"Marked notification {notification_id.value} as read")
+        self._logger.info(f"Marked notification {notification_id.value} as read")
         return True
     
     def get_unread_count(self, user_id: UserId) -> int:
@@ -393,7 +394,7 @@ class NotificationService:
             raise ValueError(f"Invalid notification channels: {invalid_channels}")
         
         self._user_preferences[str(user_id.value)] = preferences.copy()
-        logger.info(f"Updated notification preferences for user {user_id.value}")
+        self._logger.info(f"Updated notification preferences for user {user_id.value}")
     
     def get_user_notification_preferences(self, user_id: UserId) -> Dict[NotificationChannel, bool]:
         """Get notification channel preferences for a user."""
@@ -425,7 +426,7 @@ class NotificationService:
             self._process_notification(notification)
             retry_count += 1
         
-        logger.info(f"Retried {retry_count} failed notifications")
+        self._logger.info(f"Retried {retry_count} failed notifications")
         return retry_count
     
     def _get_preferred_channel(self, user_id: UserId, notification_type: NotificationType) -> NotificationChannel:
@@ -471,9 +472,9 @@ class NotificationService:
                 notification.status = NotificationStatus.SENT
                 notification.sent_at = datetime.now()
             
-            logger.info(f"Processed notification {notification.id.value} via {notification.channel.name}")
+            self._logger.info(f"Processed notification {notification.id.value} via {notification.channel.name}")
             
         except Exception as e:
             notification.status = NotificationStatus.FAILED
             notification.error = str(e)
-            logger.error(f"Failed to process notification {notification.id.value}: {e}")
+            self._logger.error(f"Failed to process notification {notification.id.value}: {e}")

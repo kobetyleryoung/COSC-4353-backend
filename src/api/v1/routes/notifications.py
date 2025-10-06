@@ -31,7 +31,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 # per instance
 @lru_cache(maxsize=1) 
 def _get_notification_service() -> NotificationService:
-    return NotificationService()
+    return NotificationService(logger)
 
 # helper to convert from dataclass model -> pydantic schema
 def _convert_notification_to_response(notification) -> NotificationResponseSchema:
