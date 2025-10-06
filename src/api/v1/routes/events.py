@@ -11,7 +11,7 @@ from ..schemas.events import (
     EventListResponseSchema, EventSearchSchema, LocationSchema
 )
 
-from config.logging_config import logger
+from src.config.logging_config import logger
 
 router = APIRouter(prefix="/events", tags=["events"])
 

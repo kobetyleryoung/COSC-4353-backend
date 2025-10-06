@@ -15,7 +15,7 @@ from ..schemas.volunteer_matching import (
     VolunteerMatchSchema, OpportunityMatchSchema,
     MatchingVolunteersResponseSchema, MatchingOpportunitiesResponseSchema
 )
-from config.logging_config import logger
+from src.config.logging_config import logger
 
 router = APIRouter(prefix="/volunteer-matching", tags=["volunteer-matching"])
 

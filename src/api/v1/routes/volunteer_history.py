@@ -12,7 +12,7 @@ from ..schemas.volunteer_history import (
     HistoryListResponseSchema, UserStatsResponseSchema, TopVolunteerResponseSchema,
     MonthlyHoursResponseSchema, YearlyStatsResponseSchema
 )
-from config.logging_config import logger
+from src.config.logging_config import logger
 
 router = APIRouter(prefix="/volunteer-history", tags=["volunteer-history"])
 

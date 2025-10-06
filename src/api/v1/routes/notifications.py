@@ -15,7 +15,7 @@ from ..schemas.notifications import (
     NotificationPreferencesResponseSchema, NotificationChannelEnum,
     NotificationTypeEnum
 )
-from config.logging_config import logger
+from src.config.logging_config import logger
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

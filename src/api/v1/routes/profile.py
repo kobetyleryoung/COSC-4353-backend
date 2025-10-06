@@ -11,7 +11,7 @@ from ..schemas.profile import (
     ProfileCreateSchema, ProfileUpdateSchema, ProfileResponseSchema,
     AddSkillSchema, AddTagSchema, AvailabilityWindowSchema, ProfileStatsSchema
 )
-from config.logging_config import logger
+from src.config.logging_config import logger
 
 # profiles sub url definition
 router = APIRouter(prefix="/profiles", tags=["profiles"])
