@@ -4,7 +4,6 @@ from typing import List, Optional
 from uuid import uuid4
 from logging import Logger
 
-from fastapi import logger
 
 from src.domain.profiles import Profile, AvailabilityWindow, Skill
 from src.domain.users import UserId
