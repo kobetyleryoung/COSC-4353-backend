@@ -29,7 +29,7 @@ The Volunteer Management System provides a robust platform for organizations to 
 
 ```bash
 # Clone the repository
-git clone https://github.com/kobetyleryoung/COSC-4353-backend
+git clone git@github.com:kobetyleryoung/COSC-4353-backend.git
 cd COSC-4353-backend
 
 # Install dependencies
