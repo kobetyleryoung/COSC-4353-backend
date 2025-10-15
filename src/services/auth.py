@@ -33,7 +33,7 @@ class AuthProvider:
                 audience=self.audience,
                 issuer=self.issuer,
             )
-            return payload  # dict with sub, scope/permissions, etc.
+            return payload  # dict with sub, scope/permissions etc
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
         except jwt.InvalidTokenError:

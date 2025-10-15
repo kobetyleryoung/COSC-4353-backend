@@ -26,16 +26,6 @@ app.add_middleware(
 # Include API routes
 app.include_router(api_router, prefix="/api")
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "message": "COSC-4353 Volunteer Management API",
-        "status": "running",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring"""
