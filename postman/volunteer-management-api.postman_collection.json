@@ -1,0 +1,1494 @@
+{
+	"info": {
+		"_postman_id": "volunteer-management-system",
+		"name": "Volunteer Management System API",
+		"description": "Comprehensive API collection for the Volunteer Management System backend. This collection includes all endpoints for managing events, profiles, volunteer matching, history tracking, and notifications.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Events",
+			"item": [
+				{
+					"name": "List All Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Published Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/published",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "published"]
+						}
+					}
+				},
+				{
+					"name": "Get Upcoming Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/upcoming",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "upcoming"]
+						}
+					}
+				},
+				{
+					"name": "Get Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/{{event_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "{{event_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Community Cleanup\",\n  \"description\": \"Help clean up the local park\",\n  \"location\": {\n    \"name\": \"Central Park\",\n    \"address\": \"123 Park Avenue\",\n    \"city\": \"Houston\",\n    \"state\": \"TX\",\n    \"postal_code\": \"77001\"\n  },\n  \"required_skills\": [\"teamwork\", \"physical_activity\"],\n  \"starts_at\": \"2024-02-15T09:00:00Z\",\n  \"ends_at\": \"2024-02-15T17:00:00Z\",\n  \"capacity\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Community Cleanup\",\n  \"description\": \"Updated description for the cleanup event\",\n  \"capacity\": 75\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/{{event_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "{{event_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Publish Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/{{event_id}}/publish",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "{{event_id}}", "publish"]
+						}
+					}
+				},
+				{
+					"name": "Cancel Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/{{event_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "{{event_id}}", "cancel"]
+						}
+					}
+				},
+				{
+					"name": "Delete Event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/{{event_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "{{event_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Search Events",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"skills\": [\"teamwork\"],\n  \"city\": \"Houston\",\n  \"state\": \"TX\",\n  \"status\": \"published\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/search",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "search"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "List All Profiles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Profile by User ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"user123\",\n  \"full_name\": \"John Doe\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"Houston\",\n  \"state\": \"TX\",\n  \"zipcode\": \"77001\",\n  \"skills\": [\"teamwork\", \"leadership\"],\n  \"preferences\": \"Outdoor activities\",\n  \"availability\": [\"2024-02-15\", \"2024-02-16\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"John Updated Doe\",\n  \"skills\": [\"teamwork\", \"leadership\", \"communication\"],\n  \"preferences\": \"Indoor and outdoor activities\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Add Skills to Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"skills\": [\"project_management\", \"public_speaking\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/skills",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "skills"]
+						}
+					}
+				},
+				{
+					"name": "Remove Skill from Profile",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/skills/{{skill}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "skills", "{{skill}}"]
+						}
+					}
+				},
+				{
+					"name": "Add Tags to Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tags\": [\"volunteer\", \"community_leader\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/tags",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "tags"]
+						}
+					}
+				},
+				{
+					"name": "Remove Tag from Profile",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/tags/{{tag}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "tags", "{{tag}}"]
+						}
+					}
+				},
+				{
+					"name": "Set User Availability",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"availability\": [\"2024-02-15\", \"2024-02-16\", \"2024-02-17\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/availability",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "availability"]
+						}
+					}
+				},
+				{
+					"name": "Clear User Availability",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/availability",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "availability"]
+						}
+					}
+				},
+				{
+					"name": "Search Profiles by Skills",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/search/by-skills?skills=teamwork,leadership",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "search", "by-skills"],
+							"query": [
+								{
+									"key": "skills",
+									"value": "teamwork,leadership"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Profiles by Tags",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/search/by-tags?tags=volunteer,community_leader",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "search", "by-tags"],
+							"query": [
+								{
+									"key": "tags",
+									"value": "volunteer,community_leader"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Profile Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Delete Profile",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "profile", "{{user_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Volunteer Matching",
+			"item": [
+				{
+					"name": "List All Opportunities",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/opportunities",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "opportunities"]
+						}
+					}
+				},
+				{
+					"name": "Get Opportunity by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/opportunities/{{opportunity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "opportunities", "{{opportunity_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Opportunities by Event",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/opportunities/by-event/{{event_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "opportunities", "by-event", "{{event_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Opportunity",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"title\": \"Team Leader\",\n  \"description\": \"Lead a team of volunteers during the cleanup\",\n  \"required_skills\": [\"leadership\", \"teamwork\"],\n  \"time_commitment\": \"4 hours\",\n  \"location\": \"Central Park Entrance\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/opportunities",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "opportunities"]
+						}
+					}
+				},
+				{
+					"name": "Create Match Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"message\": \"I would like to volunteer for this opportunity\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "match-requests"]
+						}
+					}
+				},
+				{
+					"name": "Get Match Requests by Opportunity",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests/by-opportunity/{{opportunity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "match-requests", "by-opportunity", "{{opportunity_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Match Requests by User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests/by-user/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "match-requests", "by-user", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Approve Match Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests/{{request_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "match-requests", "{{request_id}}", "approve"]
+						}
+					}
+				},
+				{
+					"name": "Reject Match Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests/{{request_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "match-requests", "{{request_id}}", "reject"]
+						}
+					}
+				},
+				{
+					"name": "Get Matches by User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/matches/by-user/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "matches", "by-user", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Matches by Opportunity",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/matches/by-opportunity/{{opportunity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "matches", "by-opportunity", "{{opportunity_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Match",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/matches/{{match_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "matches", "{{match_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Find Volunteers for Opportunity",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/find-volunteers/{{opportunity_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "find-volunteers", "{{opportunity_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Find Opportunities for User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/find-opportunities/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "find-opportunities", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Expire Old Match Requests",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-matching/expire-old-requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-matching", "expire-old-requests"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Volunteer History",
+			"item": [
+				{
+					"name": "List All History Entries",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", ""]
+						}
+					}
+				},
+				{
+					"name": "Get History Entry by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/{{entry_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "{{entry_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User Volunteer History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Event Volunteer History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/event/{{event_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "event", "{{event_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Create History Entry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"participation_date\": \"2024-02-15\",\n  \"hours_volunteered\": 4.5,\n  \"role\": \"Team Leader\",\n  \"feedback\": \"Great experience leading the team\",\n  \"status\": \"completed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", ""]
+						}
+					}
+				},
+				{
+					"name": "Update History Entry",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"hours_volunteered\": 5.0,\n  \"feedback\": \"Excellent experience leading the team and helping the community\",\n  \"status\": \"completed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/{{entry_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "{{entry_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete History Entry",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/{{entry_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "{{entry_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User Total Hours",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/total-hours",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "total-hours"]
+						}
+					}
+				},
+				{
+					"name": "Get User Hours in Period",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/hours-in-period?start_date=2024-01-01&end_date=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "hours-in-period"],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-12-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Event Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/event-count",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "event-count"]
+						}
+					}
+				},
+				{
+					"name": "Get User Roles Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "roles"]
+						}
+					}
+				},
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "statistics"]
+						}
+					}
+				},
+				{
+					"name": "Get User Monthly Hours by Year",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/user/{{user_id}}/monthly-hours/2024",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "user", "{{user_id}}", "monthly-hours", "2024"]
+						}
+					}
+				},
+				{
+					"name": "Get Top Volunteers by Hours",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/top-volunteers/by-hours?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "top-volunteers", "by-hours"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Top Volunteers by Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/volunteer-history/top-volunteers/by-events?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "volunteer-history", "top-volunteers", "by-events"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get User Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/user/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "user", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Send General Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"type\": \"general\",\n  \"title\": \"System Maintenance\",\n  \"message\": \"The system will be under maintenance tonight from 11 PM to 1 AM\",\n  \"priority\": \"medium\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/send",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "send"]
+						}
+					}
+				},
+				{
+					"name": "Send Event Assignment Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"role\": \"Team Leader\",\n  \"additional_info\": \"Please arrive 15 minutes early for briefing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/event-assignment",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "event-assignment"]
+						}
+					}
+				},
+				{
+					"name": "Send Event Reminder",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"reminder_time\": \"24_hours\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/event-reminder",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "event-reminder"]
+						}
+					}
+				},
+				{
+					"name": "Send Event Update Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"update_type\": \"time_change\",\n  \"details\": \"Event start time has been moved from 9 AM to 10 AM\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/event-update",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "event-update"]
+						}
+					}
+				},
+				{
+					"name": "Send Event Cancellation Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"reason\": \"Weather conditions\",\n  \"reschedule_info\": \"Event will be rescheduled for next Saturday\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/event-cancellation",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "event-cancellation"]
+						}
+					}
+				},
+				{
+					"name": "Send Match Request Approved Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"next_steps\": \"Check your email for further instructions\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/match-request-approved",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "match-request-approved"]
+						}
+					}
+				},
+				{
+					"name": "Send Match Request Rejected Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"reason\": \"Position already filled\",\n  \"alternative_suggestions\": \"Check out similar opportunities in your area\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/match-request-rejected",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "match-request-rejected"]
+						}
+					}
+				},
+				{
+					"name": "Send New Opportunity Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"match_score\": 85,\n  \"why_matched\": \"Matches your skills in leadership and teamwork\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/new-opportunity",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "new-opportunity"]
+						}
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/mark-read",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "{{notification_id}}", "mark-read"]
+						}
+					}
+				},
+				{
+					"name": "Get Unread Notification Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/user/{{user_id}}/unread-count",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "user", "{{user_id}}", "unread-count"]
+						}
+					}
+				},
+				{
+					"name": "Get Notification Preferences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/user/{{user_id}}/preferences",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "user", "{{user_id}}", "preferences"]
+						}
+					}
+				},
+				{
+					"name": "Update Notification Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email_notifications\": true,\n  \"sms_notifications\": false,\n  \"push_notifications\": true,\n  \"event_reminders\": true,\n  \"match_notifications\": true,\n  \"system_notifications\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/user/{{user_id}}/preferences",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "user", "{{user_id}}", "preferences"]
+						}
+					}
+				},
+				{
+					"name": "Get Pending Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "pending"]
+						}
+					}
+				},
+				{
+					"name": "Retry Failed Notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/retry-failed",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "retry-failed"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "default"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "default",
+			"description": "JWT token from Auth0"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "default",
+			"description": "User identifier"
+		},
+		{
+			"key": "event_id",
+			"value": "",
+			"type": "default",
+			"description": "Event identifier"
+		},
+		{
+			"key": "opportunity_id",
+			"value": "",
+			"type": "default",
+			"description": "Opportunity identifier"
+		},
+		{
+			"key": "request_id",
+			"value": "",
+			"type": "default",
+			"description": "Match request identifier"
+		},
+		{
+			"key": "match_id",
+			"value": "",
+			"type": "default",
+			"description": "Match identifier"
+		},
+		{
+			"key": "entry_id",
+			"value": "",
+			"type": "default",
+			"description": "History entry identifier"
+		},
+		{
+			"key": "notification_id",
+			"value": "",
+			"type": "default",
+			"description": "Notification identifier"
+		},
+		{
+			"key": "skill",
+			"value": "",
+			"type": "default",
+			"description": "Skill name for removal operations"
+		},
+		{
+			"key": "tag",
+			"value": "",
+			"type": "default",
+			"description": "Tag name for removal operations"
+		}
+	]
+}
