@@ -1,19 +1,23 @@
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.orm import sessionmaker
-from src.config.database import Base, schema_Name
-from src.repositories import models
+# scripts/init.py
+from sqlalchemy import text, inspect
+from src.repositories import models            # ensure models are imported
+from src.repositories.models import Base
+from src.repositories.database import create_database_engine
 
-Database_URL = "postgresql+psycopg2://user:password!@localhost:5432/COSC4353_DB"
-engine = create_engine(Database_URL)
+# Build the engine using your existing env-aware helper
+engine = create_database_engine()
 
+SCHEMA_NAME = getattr(models, "schema_Name", "public")
 with engine.begin() as conn:
-    conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema_Name}"'))
+    if SCHEMA_NAME != "public":
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA_NAME}"'))
+        conn.execute(text(f"SET search_path TO {SCHEMA_NAME}, public"))
 
-Base.metadata.create_all(bind=engine)
+# Create tables/constraints
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
-SessionLocal= sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Verify tables
-inspector = inspect(engine)
-print(inspector.get_table_names(schema=schema_Name))
-print(f"✅ Database schema '{schema_Name}' and tables created successfully!")
+# Verify
+insp = inspect(engine)
+print("Schemas:", insp.get_schema_names())
+print(f"Tables in '{SCHEMA_NAME}':", insp.get_table_names(schema=SCHEMA_NAME))
+print(f"✅ Schema '{SCHEMA_NAME}' and tables created successfully.")
