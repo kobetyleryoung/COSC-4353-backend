@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.event_management import EventManagementService
 from src.domain.events import Event, EventId, Location
@@ -10,22 +9,17 @@ from ..schemas.events import (
     EventCreateSchema, EventUpdateSchema, EventResponseSchema,
     EventListResponseSchema, EventSearchSchema, LocationSchema
 )
-
+from src.repositories.unit_of_work import UnitOfWorkManager
 from src.config.logging_config import logger
+from src.config.database_settings import get_uow
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_event_service() -> EventManagementService:
-    return EventManagementService(logger)
-
+def _get_event_service(uow=Depends(get_uow)) -> EventManagementService:
+        return EventManagementService(uow.session, logger)
+    
 def _convert_location_to_schema(location) -> Optional[LocationSchema]:
     """Convert Location domain model to LocationSchema"""
     if location is None:

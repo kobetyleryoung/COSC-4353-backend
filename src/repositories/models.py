@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, ENUM
 from src.config.database import Base
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
+from src.config.database import schema_Name
 
 # Enum definitions for database
 class UserRoleEnum(Enum):
@@ -58,6 +59,7 @@ user_roles = Table(
 
 class UserModel(Base):
     __tablename__ = 'users'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
@@ -75,6 +77,7 @@ class UserModel(Base):
 
 class ProfileModel(Base):
     __tablename__ = 'profiles'
+    __table_args__ = {"schema": schema_Name}
     
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('users.id'), primary_key=True)
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -89,6 +92,7 @@ class ProfileModel(Base):
 
 class AvailabilityWindowModel(Base):
     __tablename__ = 'availability_windows'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('profiles.user_id'), nullable=False)
@@ -105,7 +109,8 @@ class AvailabilityWindowModel(Base):
 
 class EventModel(Base):
     __tablename__ = 'events'
-    
+    __table_args__ = {"schema": schema_Name}
+
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -136,6 +141,7 @@ class EventModel(Base):
 
 class OpportunityModel(Base):
     __tablename__ = 'opportunities'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     event_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('events.id'), nullable=False)
@@ -158,6 +164,7 @@ class OpportunityModel(Base):
 
 class MatchModel(Base):
     __tablename__ = 'matches'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
@@ -179,6 +186,7 @@ class MatchModel(Base):
 
 class MatchRequestModel(Base):
     __tablename__ = 'match_requests'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
@@ -200,6 +208,7 @@ class MatchRequestModel(Base):
 
 class NotificationModel(Base):
     __tablename__ = 'notifications'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     recipient_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
@@ -223,6 +232,7 @@ class NotificationModel(Base):
 
 class VolunteerHistoryEntryModel(Base):
     __tablename__ = 'volunteer_history'
+    __table_args__ = {"schema": schema_Name}
     
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)

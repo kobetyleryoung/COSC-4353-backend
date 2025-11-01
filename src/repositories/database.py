@@ -31,9 +31,9 @@ def get_postgres_url() -> str:
     # Build from individual components
     host = os.getenv("DATABASE_HOST", "localhost")
     port = os.getenv("DATABASE_PORT", "5432")
-    database = os.getenv("DATABASE_NAME", "volunteer_management")
-    username = os.getenv("DATABASE_USER", "postgres")
-    password = os.getenv("DATABASE_PASSWORD", "postgres")
+    database = os.getenv("DATABASE_NAME", "COSC4353_DB")
+    username = os.getenv("DATABASE_USER", "UserName")
+    password = os.getenv("DATABASE_PASSWORD", "Password!")
     
     return f"postgresql://{username}:{password}@{host}:{port}/{database}"
 
