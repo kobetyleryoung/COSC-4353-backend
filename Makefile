@@ -1,7 +1,7 @@
 # COSC-4353 Backend Makefile
 # Simple commands to run the volunteer management API
 
-.PHONY: help install dev test test-unit test-integration test-coverage clean lint format run db-init db-drop db-reset db-check
+.PHONY: help install dev test test-unit test-integration test-coverage clean lint format run db-up db-down db-init db-drop db-reset db-check
 
 # Default target
 help:
@@ -16,6 +16,10 @@ help:
 	@echo "  make lint         - Check code style"
 	@echo "  make format       - Format code"
 	@echo "  make clean        - Clean cache files"
+	@echo ""
+	@echo "Docker commands:"
+	@echo "  make db-up        - Start PostgreSQL database container"
+	@echo "  make db-down      - Stop PostgreSQL database container"
 	@echo ""
 	@echo "Database commands:"
 	@echo "  make db-init      - Initialize database tables"
@@ -70,6 +74,15 @@ clean:
 	rm -f coverage.xml
 	rm -rf .coverage
 	rm -rf .pytest_cache/
+
+# Docker commands
+db-up:
+	docker compose -f docker/docker-compose.yml up -d
+	@echo "Waiting for PostgreSQL to be ready..."
+	@sleep 3
+
+db-down:
+	docker compose -f docker/docker-compose.yml down
 
 # Database commands
 db-init:

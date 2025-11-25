@@ -66,6 +66,19 @@ The following entities are mapped to database tables:
 
 ### Database Configuration
 
+The application uses PostgreSQL. For development, use Docker:
+
+```bash
+# Start PostgreSQL container
+make db-up
+
+# Initialize database tables
+make db-init
+
+# Stop PostgreSQL container
+make db-down
+```
+
 Configure the PostgreSQL database using environment variables:
 
 ```bash
@@ -77,10 +90,10 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=volunteer_management
 DATABASE_USER=postgres
-DATABASE_PASSWORD=password
+DATABASE_PASSWORD=postgres
 ```
 
-For development, you can use default values if no environment variables are set:
+Docker Compose default values (in `docker/docker-compose.yml`):
 - Host: localhost
 - Port: 5432
 - Database: volunteer_management
