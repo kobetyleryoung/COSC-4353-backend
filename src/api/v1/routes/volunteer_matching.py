@@ -404,7 +404,6 @@ async def find_matching_opportunities(
         
         matches = matching_service.find_matching_opportunities(
             user_id=UserId(user_id),
-            profile=profile,
             min_score=min_score
         )
         
