@@ -132,6 +132,13 @@ class SqlAlchemyUserRepository:
     def __init__(self, session: Session):
         self.session = session
     
+    def get(self, user_id: UserId) -> Optional[User]:
+        """Get user by ID."""
+        user_model = self.session.query(UserModel).filter_by(id=user_id.value).first()
+        if not user_model:
+            return None
+        return self._model_to_domain(user_model)
+    
     def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email address."""
         user_model = self.session.query(UserModel).filter_by(email=email).first()
@@ -207,6 +214,44 @@ class SqlAlchemyProfileRepository:
         if not profile_model:
             return None
         return self._model_to_domain(profile_model)
+    
+    def get_all(self) -> List[Profile]:
+        """Get all profiles."""
+        profile_models = self.session.query(ProfileModel).all()
+        return [self._model_to_domain(model) for model in profile_models]
+    
+    def get_by_skills(self, skills: List[str]) -> List[Profile]:
+        """Get profiles by skills."""
+        # This is a simplified version - you might want to make it more sophisticated
+        all_profiles = self.get_all()
+        return [p for p in all_profiles if any(skill in p.skills for skill in skills)]
+    
+    def get_by_tags(self, tags: List[str]) -> List[Profile]:
+        """Get profiles by tags."""
+        all_profiles = self.get_all()
+        return [p for p in all_profiles if any(tag in p.tags for tag in tags)]
+    
+    def delete(self, user_id: UserId) -> None:
+        """Delete a profile."""
+        # Delete availability windows first
+        self.session.query(AvailabilityWindowModel).filter_by(user_id=user_id.value).delete()
+        # Delete profile
+        self.session.query(ProfileModel).filter_by(user_id=user_id.value).delete()
+    
+    def add(self, profile: Profile) -> None:
+        """Add a new profile."""
+        profile_model = self._domain_to_model(profile)
+        self.session.add(profile_model)
+        
+        # Add availability windows
+        for window in profile.availability:
+            window_model = AvailabilityWindowModel(
+                user_id=profile.user_id.value,
+                weekday=window.weekday,
+                start_time=window.start,
+                end_time=window.end
+            )
+            self.session.add(window_model)
     
     def save(self, profile: Profile) -> None:
         """Save/update a profile."""
@@ -293,6 +338,34 @@ class SqlAlchemyEventRepository:
         if not event_model:
             return None
         return self._model_to_domain(event_model)
+    
+    def get_by_id(self, event_id: EventId) -> Optional[Event]:
+        """Alias for get()."""
+        return self.get(event_id)
+    
+    def list_all(self) -> List[Event]:
+        """Get all events."""
+        event_models = self.session.query(EventModel).all()
+        return [self._model_to_domain(model) for model in event_models]
+    
+    def get_by_status(self, status: EventStatus) -> List[Event]:
+        """Get events by status."""
+        status_enum = _map_event_status_to_enum(status)
+        event_models = self.session.query(EventModel).filter_by(status=status_enum).all()
+        return [self._model_to_domain(model) for model in event_models]
+    
+    def get_by_skills(self, skills: List[str]) -> List[Event]:
+        """Get events by required skills."""
+        all_events = self.list_all()
+        return [e for e in all_events if any(skill in e.required_skills for skill in skills)]
+    
+    def update(self, event: Event) -> None:
+        """Alias for save()."""
+        self.save(event)
+    
+    def delete(self, event_id: EventId) -> None:
+        """Delete an event."""
+        self.session.query(EventModel).filter_by(id=event_id.value).delete()
     
     def add(self, event: Event) -> None:
         """Add a new event."""
@@ -404,6 +477,19 @@ class SqlAlchemyOpportunityRepository:
             return None
         return self._model_to_domain(opp_model)
     
+    def get_by_id(self, opp_id: OpportunityId) -> Optional[Opportunity]:
+        """Alias for get()."""
+        return self.get(opp_id)
+    
+    def get_by_event(self, event_id: EventId) -> List[Opportunity]:
+        """Alias for list_for_event()."""
+        return self.list_for_event(event_id)
+    
+    def list_all(self) -> List[Opportunity]:
+        """Get all opportunities."""
+        opp_models = self.session.query(OpportunityModel).all()
+        return [self._model_to_domain(model) for model in opp_models]
+    
     def add(self, opp: Opportunity) -> None:
         """Add a new opportunity."""
         opp_model = self._domain_to_model(opp)
@@ -469,6 +555,22 @@ class SqlAlchemyMatchRepository:
         if not match_model:
             return None
         return self._model_to_domain(match_model)
+    
+    def get_by_id(self, match_id: MatchId) -> Optional[Match]:
+        """Alias for get()."""
+        return self.get(match_id)
+    
+    def get_by_user(self, user_id: UserId) -> List[Match]:
+        """Alias for list_for_user()."""
+        return self.list_for_user(user_id)
+    
+    def get_by_opportunity(self, opp_id: OpportunityId) -> List[Match]:
+        """Alias for list_for_opportunity()."""
+        return self.list_for_opportunity(opp_id)
+    
+    def update(self, match: Match) -> None:
+        """Alias for save()."""
+        self.save(match)
     
     def add(self, match: Match) -> None:
         """Add a new match."""
@@ -544,6 +646,24 @@ class SqlAlchemyMatchRequestRepository:
             return None
         return self._model_to_domain(req_model)
     
+    def get_by_id(self, req_id: MatchRequestId) -> Optional[MatchRequest]:
+        """Alias for get()."""
+        return self.get(req_id)
+    
+    def get_by_user(self, user_id: UserId) -> List[MatchRequest]:
+        """Get all match requests for a user."""
+        req_models = self.session.query(MatchRequestModel).filter_by(user_id=user_id.value).all()
+        return [self._model_to_domain(model) for model in req_models]
+    
+    def get_by_opportunity(self, opp_id: OpportunityId) -> List[MatchRequest]:
+        """Get all match requests for an opportunity."""
+        req_models = self.session.query(MatchRequestModel).filter_by(opportunity_id=opp_id.value).all()
+        return [self._model_to_domain(model) for model in req_models]
+    
+    def update(self, req: MatchRequest) -> None:
+        """Alias for save()."""
+        self.save(req)
+    
     def add(self, req: MatchRequest) -> None:
         """Add a new match request."""
         req_model = self._domain_to_model(req)
@@ -607,6 +727,24 @@ class SqlAlchemyNotificationRepository:
         if not notif_model:
             return None
         return self._model_to_domain(notif_model)
+    
+    def get_by_id(self, notif_id: NotificationId) -> Optional[Notification]:
+        """Alias for get()."""
+        return self.get(notif_id)
+    
+    def get_by_user(self, user_id: UserId) -> List[Notification]:
+        """Get all notifications for a user."""
+        notif_models = self.session.query(NotificationModel).filter_by(recipient_id=user_id.value).all()
+        return [self._model_to_domain(model) for model in notif_models]
+    
+    def list_all(self) -> List[Notification]:
+        """Get all notifications."""
+        notif_models = self.session.query(NotificationModel).all()
+        return [self._model_to_domain(model) for model in notif_models]
+    
+    def update(self, notif: Notification) -> None:
+        """Alias for save()."""
+        self.save(notif)
     
     def add(self, notif: Notification) -> None:
         """Add a new notification."""
@@ -681,6 +819,31 @@ class SqlAlchemyVolunteerHistoryRepository:
         if not entry_model:
             return None
         return self._model_to_domain(entry_model)
+    
+    def get_by_id(self, entry_id: VolunteerHistoryEntryId) -> Optional[VolunteerHistoryEntry]:
+        """Alias for get()."""
+        return self.get(entry_id)
+    
+    def get_by_user(self, user_id: UserId) -> List[VolunteerHistoryEntry]:
+        """Alias for list_for_user()."""
+        return self.list_for_user(user_id)
+    
+    def get_by_event(self, event_id: EventId) -> List[VolunteerHistoryEntry]:
+        """Alias for list_for_event()."""
+        return self.list_for_event(event_id)
+    
+    def list_all(self) -> List[VolunteerHistoryEntry]:
+        """Get all volunteer history entries."""
+        entry_models = self.session.query(VolunteerHistoryEntryModel).all()
+        return [self._model_to_domain(model) for model in entry_models]
+    
+    def update(self, entry: VolunteerHistoryEntry) -> None:
+        """Alias for save()."""
+        self.save(entry)
+    
+    def delete(self, entry_id: VolunteerHistoryEntryId) -> None:
+        """Delete a volunteer history entry."""
+        self.session.query(VolunteerHistoryEntryModel).filter_by(id=entry_id.value).delete()
     
     def add(self, entry: VolunteerHistoryEntry) -> None:
         """Add a new volunteer history entry."""

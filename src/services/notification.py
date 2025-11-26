@@ -1,6 +1,6 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from datetime import datetime
+from typing import List, Optional, Dict
 from enum import Enum
 from logging import Logger
 
@@ -8,6 +8,7 @@ from src.domain.notifications import (
     Notification, NotificationId, NotificationChannel, NotificationStatus
 )
 from src.domain.users import UserId
+from src.repositories.unit_of_work import UnitOfWorkManager
 
 
 class NotificationType(Enum):
@@ -25,75 +26,9 @@ class NotificationType(Enum):
 class NotificationService:
     """Service for sending notifications to volunteers for event assignments, updates, and reminders."""
     
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, uow_manager: UnitOfWorkManager, logger: Logger) -> None:
+        self._uow_manager = uow_manager
         self._logger = logger
-        # Hard-coded data storage (no database implementation)
-        self._notifications: dict[str, Notification] = {}
-        self._user_preferences: dict[str, Dict[NotificationChannel, bool]] = {}
-        self._initialize_sample_data()
-    
-    def _initialize_sample_data(self) -> None:
-        """Initialize with sample notifications and user preferences."""
-        # Sample notification 1
-        user1_id = UserId.new()
-        notif1_id = NotificationId.new()
-        notification1 = Notification(
-            id=notif1_id,
-            recipient=user1_id,
-            subject="Event Assignment Confirmation",
-            body="You have been assigned to the Community Park Cleanup event on March 15th. Please confirm your attendance.",
-            channel=NotificationChannel.EMAIL,
-            status=NotificationStatus.SENT,
-            queued_at=datetime.now() - timedelta(hours=2),
-            sent_at=datetime.now() - timedelta(hours=1)
-        )
-        self._notifications[str(notif1_id.value)] = notification1
-        
-        # Sample notification 2
-        user2_id = UserId.new()
-        notif2_id = NotificationId.new()
-        notification2 = Notification(
-            id=notif2_id,
-            recipient=user2_id,
-            subject="Event Reminder",
-            body="Reminder: Food Bank Distribution event tomorrow at 9:00 AM. Location: Houston Food Bank",
-            channel=NotificationChannel.SMS,
-            status=NotificationStatus.QUEUED,
-            queued_at=datetime.now() - timedelta(minutes=30)
-        )
-        self._notifications[str(notif2_id.value)] = notification2
-        
-        # Sample notification 3
-        user3_id = UserId.new()
-        notif3_id = NotificationId.new()
-        notification3 = Notification(
-            id=notif3_id,
-            recipient=user3_id,
-            subject="Match Request Approved",
-            body="Great news! Your application for the Senior Center Activities event has been approved.",
-            channel=NotificationChannel.IN_APP,
-            status=NotificationStatus.SENT,
-            queued_at=datetime.now() - timedelta(days=1),
-            sent_at=datetime.now() - timedelta(hours=23)
-        )
-        self._notifications[str(notif3_id.value)] = notification3
-        
-        # Sample user preferences
-        self._user_preferences[str(user1_id.value)] = {
-            NotificationChannel.EMAIL: True,
-            NotificationChannel.SMS: False,
-            NotificationChannel.PUSH: True,
-            NotificationChannel.IN_APP: True
-        }
-        
-        self._user_preferences[str(user2_id.value)] = {
-            NotificationChannel.EMAIL: True,
-            NotificationChannel.SMS: True,
-            NotificationChannel.PUSH: False,
-            NotificationChannel.IN_APP: True
-        }
-        
-        self._logger.info(f"Initialized {len(self._notifications)} sample notifications")
     
     def send_notification(
         self,
@@ -123,15 +58,6 @@ class NotificationService:
         if channel is None:
             channel = self._get_preferred_channel(recipient, notification_type)
         
-        # Check if user has enabled this channel
-        if not self._is_channel_enabled(recipient, channel):
-            self._logger.warning(f"Channel {channel.name} is disabled for user {recipient.value}")
-            # Fall back to IN_APP if available
-            if self._is_channel_enabled(recipient, NotificationChannel.IN_APP):
-                channel = NotificationChannel.IN_APP
-            else:
-                raise ValueError("No enabled notification channels for user")
-        
         # Create notification
         notification_id = NotificationId.new()
         notification = Notification(
@@ -144,7 +70,9 @@ class NotificationService:
             queued_at=datetime.now()
         )
         
-        self._notifications[str(notification_id.value)] = notification
+        with self._uow_manager.get_uow() as uow:
+            uow.notifications.add(notification)
+            uow.commit()
         
         # Simulate sending (in real implementation, this would integrate with email/SMS services)
         self._process_notification(notification)
@@ -337,10 +265,8 @@ class NotificationService:
         status_filter: Optional[NotificationStatus] = None
     ) -> List[Notification]:
         """Get notifications for a specific user."""
-        user_notifications = [
-            notif for notif in self._notifications.values()
-            if notif.recipient.value == user_id.value
-        ]
+        with self._uow_manager.get_uow() as uow:
+            user_notifications = uow.notifications.get_by_user(user_id)
         
         if status_filter:
             user_notifications = [
@@ -358,123 +284,78 @@ class NotificationService:
     
     def mark_notification_as_read(self, notification_id: NotificationId) -> bool:
         """Mark a notification as read (for in-app notifications)."""
-        notification = self._notifications.get(str(notification_id.value))
-        if not notification:
-            return False
-        
-        # For demo purposes, we'll just log this
-        # In real implementation, you'd update a "read" status
-        self._logger.info(f"Marked notification {notification_id.value} as read")
-        return True
+        with self._uow_manager.get_uow() as uow:
+            notification = uow.notifications.get_by_id(notification_id)
+            if not notification:
+                return False
+            
+            # For demo purposes, we'll just log this
+            # In real implementation, you'd update a "read" status
+            self._logger.info(f"Marked notification {notification_id.value} as read")
+            return True
     
     def get_unread_count(self, user_id: UserId) -> int:
         """Get count of unread in-app notifications for a user."""
-        # For demo purposes, return a count of in-app notifications
+        with self._uow_manager.get_uow() as uow:
+            user_notifications = uow.notifications.get_by_user(user_id)
+            
+        # For demo purposes, count in-app notifications
         # In real implementation, you'd track read status
         in_app_notifications = [
-            notif for notif in self._notifications.values()
-            if (notif.recipient.value == user_id.value and
-                notif.channel == NotificationChannel.IN_APP and
-                notif.status == NotificationStatus.SENT)
+            notif for notif in user_notifications
+            if notif.channel == NotificationChannel.IN_APP and notif.status == NotificationStatus.SENT
         ]
         return len(in_app_notifications)
     
-    def set_user_notification_preferences(
-        self,
-        user_id: UserId,
-        preferences: Dict[NotificationChannel, bool]
-    ) -> None:
-        """Set notification channel preferences for a user."""
-        # Validation
-        valid_channels = set(NotificationChannel)
-        provided_channels = set(preferences.keys())
-        
-        if not provided_channels.issubset(valid_channels):
-            invalid_channels = provided_channels - valid_channels
-            raise ValueError(f"Invalid notification channels: {invalid_channels}")
-        
-        self._user_preferences[str(user_id.value)] = preferences.copy()
-        self._logger.info(f"Updated notification preferences for user {user_id.value}")
-    
-    def get_user_notification_preferences(self, user_id: UserId) -> Dict[NotificationChannel, bool]:
-        """Get notification channel preferences for a user."""
-        return self._user_preferences.get(str(user_id.value), {
-            NotificationChannel.EMAIL: True,
-            NotificationChannel.SMS: False,
-            NotificationChannel.PUSH: True,
-            NotificationChannel.IN_APP: True
-        })
-    
     def get_pending_notifications(self) -> List[Notification]:
         """Get all notifications that are queued but not yet sent."""
+        with self._uow_manager.get_uow() as uow:
+            all_notifications = uow.notifications.list_all()
+            
         return [
-            notif for notif in self._notifications.values()
+            notif for notif in all_notifications
             if notif.status == NotificationStatus.QUEUED
         ]
     
     def retry_failed_notifications(self) -> int:
         """Retry sending failed notifications."""
+        with self._uow_manager.get_uow() as uow:
+            all_notifications = uow.notifications.list_all()
+            
         failed_notifications = [
-            notif for notif in self._notifications.values()
+            notif for notif in all_notifications
             if notif.status == NotificationStatus.FAILED
         ]
         
         retry_count = 0
         for notification in failed_notifications:
-            notification.status = NotificationStatus.QUEUED
-            notification.error = None
-            self._process_notification(notification)
-            retry_count += 1
+            try:
+                self._process_notification(notification)
+                retry_count += 1
+            except Exception as e:
+                self._logger.error(f"Failed to retry notification {notification.id.value}: {e}")
         
         self._logger.info(f"Retried {retry_count} failed notifications")
         return retry_count
     
     def _get_preferred_channel(self, user_id: UserId, notification_type: NotificationType) -> NotificationChannel:
         """Get the preferred notification channel for a user and notification type."""
-        preferences = self.get_user_notification_preferences(user_id)
-        
-        # Priority order based on notification type
+        # For demo purposes, use EMAIL as default
+        # In real implementation, fetch from user preferences
         if notification_type in [NotificationType.EVENT_CANCELLATION, NotificationType.EVENT_UPDATE]:
-            # High priority notifications - prefer immediate channels
-            if preferences.get(NotificationChannel.SMS, False):
-                return NotificationChannel.SMS
-            elif preferences.get(NotificationChannel.PUSH, False):
-                return NotificationChannel.PUSH
-        
-        # Default preference order
-        if preferences.get(NotificationChannel.EMAIL, False):
             return NotificationChannel.EMAIL
-        elif preferences.get(NotificationChannel.IN_APP, False):
-            return NotificationChannel.IN_APP
-        elif preferences.get(NotificationChannel.PUSH, False):
-            return NotificationChannel.PUSH
-        elif preferences.get(NotificationChannel.SMS, False):
-            return NotificationChannel.SMS
         
-        # Fallback
-        return NotificationChannel.IN_APP
-    
-    def _is_channel_enabled(self, user_id: UserId, channel: NotificationChannel) -> bool:
-        """Check if a notification channel is enabled for a user."""
-        preferences = self.get_user_notification_preferences(user_id)
-        return preferences.get(channel, False)
+        return NotificationChannel.EMAIL
     
     def _process_notification(self, notification: Notification) -> None:
-        """Process/send a notification (simulated for demo)."""
-        try:
-            # Simulate processing time and potential failures
-            import random
-            
-            if random.random() < 0.1:  # 10% chance of failure for demo
-                notification.status = NotificationStatus.FAILED
-                notification.error = "Simulated delivery failure"
-            else:
-                notification.status = NotificationStatus.SENT
-                notification.sent_at = datetime.now()
-            
-            self._logger.info(f"Processed notification {notification.id.value} via {notification.channel.name}")
-            
-        except Exception as e:
-            notification.status = NotificationStatus.FAILED
-            notification.error = str(e)
-            self._logger.error(f"Failed to process notification {notification.id.value}: {e}")
+        """Process (send) a notification."""
+        # In real implementation, this would integrate with email/SMS services
+        # For now, just mark as sent
+        notification.status = NotificationStatus.SENT
+        notification.sent_at = datetime.now()
+        
+        with self._uow_manager.get_uow() as uow:
+            uow.notifications.update(notification)
+            uow.commit()
+        
+        self._logger.info(f"Processed notification {notification.id.value}")

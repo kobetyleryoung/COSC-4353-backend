@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
+from datetime import time
 
 from src.services.profile_management import ProfileManagementService
 from src.services.volunteer_history import VolunteerHistoryService
 from src.domain.users import UserId
 from src.domain.profiles import AvailabilityWindow
+from src.config.database_settings import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.profile import (
     ProfileCreateSchema, ProfileUpdateSchema, ProfileResponseSchema,
     AddSkillSchema, AddTagSchema, AvailabilityWindowSchema, ProfileStatsSchema
@@ -18,27 +20,24 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService(logger)
+def _get_profile_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> ProfileManagementService:
+    return ProfileManagementService(uow_manager, logger)
 
-#TODO: see above todo
-@lru_cache(maxsize=1) 
-def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(logger)
+
+def _get_history_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> VolunteerHistoryService:
+    return VolunteerHistoryService(uow_manager, logger)
 
 
 def _convert_availability_schema_to_domain(availability_schema: AvailabilityWindowSchema) -> AvailabilityWindow:
     """Convert AvailabilityWindowSchema to domain AvailabilityWindow."""
+    # Parse time string (HH:MM) to time object
+    start_parts = availability_schema.start.split(':')
+    end_parts = availability_schema.end.split(':')
+    
     return AvailabilityWindow(
         weekday=availability_schema.weekday,
-        start=availability_schema.start,
-        end=availability_schema.end
+        start=time(int(start_parts[0]), int(start_parts[1])),
+        end=time(int(end_parts[0]), int(end_parts[1]))
     )
 
 
@@ -46,8 +45,8 @@ def _convert_availability_domain_to_schema(availability: AvailabilityWindow) -> 
     """Convert domain AvailabilityWindow to AvailabilityWindowSchema."""
     return AvailabilityWindowSchema(
         weekday=availability.weekday,
-        start=availability.start,
-        end=availability.end
+        start=availability.start.strftime('%H:%M'),
+        end=availability.end.strftime('%H:%M')
     )
 
 

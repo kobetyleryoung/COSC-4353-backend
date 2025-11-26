@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.notification import NotificationService, NotificationType
 from src.domain.users import UserId
 from src.domain.notifications import NotificationId, NotificationChannel
+from src.config.database_settings import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.notifications import (
     SendNotificationSchema, EventAssignmentNotificationSchema,
     EventReminderNotificationSchema, EventUpdateNotificationSchema,
@@ -21,17 +22,8 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 #region helpers
 
-# getter used to return an instance of NotificationService
-# we use this in conjuction with Depends to inject the Notification Service to the routes
-
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_notification_service() -> NotificationService:
-    return NotificationService(logger)
+def _get_notification_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> NotificationService:
+    return NotificationService(uow_manager, logger)
 
 # helper to convert from dataclass model -> pydantic schema
 def _convert_notification_to_response(notification) -> NotificationResponseSchema:

@@ -1,13 +1,13 @@
 from pydantic import BaseModel, Field, validator
-from datetime import datetime, time
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
 
 class AvailabilityWindowSchema(BaseModel):
     weekday: int = Field(..., ge=0, le=6, description="Day of week (0=Monday, 6=Sunday)")
-    start: time = Field(..., description="Start time")
-    end: time = Field(..., description="End time")
+    start: str = Field(..., description="Start time in HH:MM format", pattern=r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$')
+    end: str = Field(..., description="End time in HH:MM format", pattern=r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$')
     
     @validator('end')
     def end_after_start(cls, v, values):

@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.volunteer_matching import VolunteerMatchingService
 from src.services.profile_management import ProfileManagementService
 from src.domain.users import UserId
 from src.domain.volunteering import OpportunityId, MatchRequestId, MatchId
 from src.domain.events import EventId
+from src.config.database_settings import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.volunteer_matching import (
     OpportunityCreateSchema, OpportunityResponseSchema,
     MatchRequestCreateSchema, MatchRequestResponseSchema,
@@ -21,18 +22,11 @@ router = APIRouter(prefix="/volunteer-matching", tags=["volunteer-matching"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1)
-def _get_matching_service() -> VolunteerMatchingService:
-    return VolunteerMatchingService(logger)
+def _get_matching_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> VolunteerMatchingService:
+    return VolunteerMatchingService(uow_manager, logger)
 
-@lru_cache(maxsize=1)
-def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService(logger)
+def _get_profile_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> ProfileManagementService:
+    return ProfileManagementService(uow_manager, logger)
 
 
 def _convert_opportunity_to_response(opportunity) -> OpportunityResponseSchema:

@@ -1,21 +1,20 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 
 class OpportunityCreateSchema(BaseModel):
     event_id: UUID = Field(..., description="Event ID")
-    title: str = Field(..., min_length=1, max_length=100, description="Opportunity title")
-    description: Optional[str] = Field(None, max_length=500, description="Opportunity description")
+    title: str = Field(..., min_length=1, max_length=200, description="Opportunity title")
+    description: Optional[str] = Field(None, max_length=1000, description="Opportunity description")
     required_skills: List[str] = Field(default_factory=list, description="Required skills")
-    min_hours: Optional[float] = Field(None, gt=0, description="Minimum hours")
-    max_slots: Optional[int] = Field(None, gt=0, description="Maximum slots")
+    min_hours: Optional[float] = Field(None, gt=0, description="Minimum hours required")
+    max_slots: Optional[int] = Field(None, gt=0, description="Maximum number of volunteer slots")
 
 
 class OpportunityResponseSchema(BaseModel):
-    id: UUID
-    event_id: UUID
+    id: str
+    event_id: str
     title: str
     description: Optional[str]
     required_skills: List[str]
@@ -27,14 +26,14 @@ class OpportunityResponseSchema(BaseModel):
 
 
 class MatchRequestCreateSchema(BaseModel):
-    opportunity_id: UUID = Field(..., description="Opportunity ID")
+    opportunity_id: str = Field(..., description="Opportunity ID (UUID string)")
 
 
 class MatchRequestResponseSchema(BaseModel):
-    id: UUID
-    user_id: UUID
-    opportunity_id: UUID
-    requested_at: datetime
+    id: str
+    user_id: str
+    opportunity_id: str
+    requested_at: str
     status: str
     score: Optional[float]
     
@@ -43,10 +42,10 @@ class MatchRequestResponseSchema(BaseModel):
 
 
 class MatchResponseSchema(BaseModel):
-    id: UUID
-    user_id: UUID
-    opportunity_id: UUID
-    created_at: datetime
+    id: str
+    user_id: str
+    opportunity_id: str
+    created_at: str
     status: str
     score: Optional[float]
     
@@ -63,7 +62,7 @@ class MatchScoreResponseSchema(BaseModel):
 
 
 class VolunteerMatchSchema(BaseModel):
-    profile: dict  # Profile data
+    profile: Dict[str, Any]  # Profile data
     score: MatchScoreResponseSchema
     
     

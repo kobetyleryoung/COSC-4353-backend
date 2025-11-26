@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.volunteer_history import VolunteerHistoryService
 from src.domain.users import UserId
 from src.domain.events import EventId
 from src.domain.volunteering import VolunteerHistoryEntryId
+from src.config.database_settings import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.volunteer_history import (
     HistoryEntryCreateSchema, HistoryEntryUpdateSchema, HistoryEntryResponseSchema,
     HistoryListResponseSchema, UserStatsResponseSchema, TopVolunteerResponseSchema,
@@ -18,14 +19,8 @@ router = APIRouter(prefix="/volunteer-history", tags=["volunteer-history"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1)
-def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(logger)
+def _get_history_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> VolunteerHistoryService:
+    return VolunteerHistoryService(uow_manager, logger)
 
 
 def _convert_history_entry_to_response(entry) -> HistoryEntryResponseSchema:

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
 from logging import Logger
@@ -11,6 +11,7 @@ from src.domain.volunteering import (
 from src.domain.events import EventId
 from src.domain.users import UserId
 from src.domain.profiles import Profile
+from src.repositories.unit_of_work import UnitOfWorkManager
 
 
 @dataclass
@@ -26,57 +27,9 @@ class MatchScore:
 class VolunteerMatchingService:
     """Service for matching volunteers to events based on their profiles and event requirements."""
     
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, uow_manager: UnitOfWorkManager, logger: Logger) -> None:
+        self._uow_manager = uow_manager
         self._logger = logger
-        # Hard-coded data storage (no database implementation)
-        self._opportunities: dict[str, Opportunity] = {}
-        self._match_requests: dict[str, MatchRequest] = {}
-        self._matches: dict[str, Match] = {}
-        self._initialize_sample_data()
-    
-    def _initialize_sample_data(self) -> None:
-        """Initialize with sample opportunities and matches."""
-        # Sample opportunities (would typically come from EventManagementService)
-        event1_id = EventId.new()
-        opp1_id = OpportunityId.new()
-        opportunity1 = Opportunity(
-            id=opp1_id,
-            event_id=event1_id,
-            title="Park Cleanup Volunteer",
-            description="General cleanup tasks including trash pickup and landscaping",
-            required_skills=["Physical Labor", "Environmental Awareness"],
-            min_hours=4.0,
-            max_slots=20
-        )
-        self._opportunities[str(opp1_id.value)] = opportunity1
-        
-        event2_id = EventId.new()
-        opp2_id = OpportunityId.new()
-        opportunity2 = Opportunity(
-            id=opp2_id,
-            event_id=event2_id,
-            title="Food Distribution Assistant",
-            description="Help organize and distribute food packages to families",
-            required_skills=["Customer Service", "Organization"],
-            min_hours=3.0,
-            max_slots=15
-        )
-        self._opportunities[str(opp2_id.value)] = opportunity2
-        
-        event3_id = EventId.new()
-        opp3_id = OpportunityId.new()
-        opportunity3 = Opportunity(
-            id=opp3_id,
-            event_id=event3_id,
-            title="Senior Companion",
-            description="Provide companionship and assist with recreational activities",
-            required_skills=["Communication", "Patience"],
-            min_hours=2.0,
-            max_slots=8
-        )
-        self._opportunities[str(opp3_id.value)] = opportunity3
-        
-        self._logger.info(f"Initialized {len(self._opportunities)} sample opportunities")
     
     def create_opportunity(
         self,
@@ -115,81 +68,219 @@ class VolunteerMatchingService:
             max_slots=max_slots
         )
         
-        self._opportunities[str(opportunity_id.value)] = opportunity
-        self._logger.info(f"Created opportunity: {title} for event {event_id.value}")
+        with self._uow_manager.get_uow() as uow:
+            uow.opportunities.add(opportunity)
+            uow.commit()
         
+        self._logger.info(f"Created opportunity: {title} (ID: {opportunity_id.value})")
         return opportunity
     
     def get_opportunity_by_id(self, opportunity_id: OpportunityId) -> Optional[Opportunity]:
         """Retrieve an opportunity by its ID."""
-        return self._opportunities.get(str(opportunity_id.value))
+        with self._uow_manager.get_uow() as uow:
+            return uow.opportunities.get_by_id(opportunity_id)
     
     def get_opportunities_by_event(self, event_id: EventId) -> List[Opportunity]:
         """Get all opportunities for a specific event."""
-        return [
-            opp for opp in self._opportunities.values()
-            if opp.event_id.value == event_id.value
-        ]
+        with self._uow_manager.get_uow() as uow:
+            return uow.opportunities.get_by_event(event_id)
     
     def get_all_opportunities(self) -> List[Opportunity]:
-        """Retrieve all opportunities."""
-        return list(self._opportunities.values())
+        """Get all opportunities."""
+        with self._uow_manager.get_uow() as uow:
+            return uow.opportunities.list_all()
     
     def create_match_request(
         self,
         user_id: UserId,
         opportunity_id: OpportunityId
     ) -> MatchRequest:
-        """Create a match request for a volunteer to apply for an opportunity."""
-        # Validate opportunity exists
-        opportunity = self.get_opportunity_by_id(opportunity_id)
-        if not opportunity:
-            raise ValueError("Opportunity does not exist")
+        """Create a match request (volunteer applies to an opportunity)."""
+        with self._uow_manager.get_uow() as uow:
+            # Check if opportunity exists
+            opportunity = uow.opportunities.get_by_id(opportunity_id)
+            if not opportunity:
+                raise ValueError("Opportunity not found")
+            
+            # Check if request already exists
+            existing_requests = uow.match_requests.get_by_user(user_id)
+            for request in existing_requests:
+                if request.opportunity_id == opportunity_id:
+                    raise ValueError("Match request already exists for this opportunity")
+            
+            # Create match request
+            request_id = MatchRequestId.new()
+            match_request = MatchRequest(
+                id=request_id,
+                user_id=user_id,
+                opportunity_id=opportunity_id,
+                requested_at=datetime.now(),
+                status=MatchStatus.REQUESTED,
+                score=None
+            )
+            
+            uow.match_requests.add(match_request)
+            uow.commit()
         
-        # Check if user already has a pending/accepted request for this opportunity
-        existing_request = self._find_user_request_for_opportunity(user_id, opportunity_id)
-        if existing_request and existing_request.status in [MatchStatus.PENDING, MatchStatus.ACCEPTED]:
-            raise ValueError("User already has an active request for this opportunity")
-        
-        # Create match request
-        request_id = MatchRequestId.new()
-        match_request = MatchRequest(
-            id=request_id,
-            user_id=user_id,
-            opportunity_id=opportunity_id,
-            requested_at=datetime.now(),
-            status=MatchStatus.PENDING
-        )
-        
-        self._match_requests[str(request_id.value)] = match_request
-        self._logger.info(f"Created match request for user {user_id.value} to opportunity {opportunity_id.value}")
-        
+        self._logger.info(f"Created match request for user {user_id.value}, opportunity {opportunity_id.value}")
         return match_request
     
-    def calculate_match_score(
+    def get_match_requests_by_user(self, user_id: UserId) -> List[MatchRequest]:
+        """Get all match requests for a user."""
+        with self._uow_manager.get_uow() as uow:
+            return uow.match_requests.get_by_user(user_id)
+    
+    def get_match_requests_by_opportunity(self, opportunity_id: OpportunityId) -> List[MatchRequest]:
+        """Get all match requests for an opportunity."""
+        with self._uow_manager.get_uow() as uow:
+            return uow.match_requests.get_by_opportunity(opportunity_id)
+    
+    def approve_match_request(
         self,
-        profile: Profile,
-        opportunity: Opportunity
-    ) -> MatchScore:
-        """Calculate how well a volunteer profile matches an opportunity."""
-        # Skill matching (40% of total score)
-        skill_score = self._calculate_skill_match_score(profile.skills, opportunity.required_skills)
+        request_id: MatchRequestId,
+        score: Optional[float] = None
+    ) -> Match:
+        """Approve a match request and create a match."""
+        with self._uow_manager.get_uow() as uow:
+            match_request = uow.match_requests.get_by_id(request_id)
+            if not match_request:
+                raise ValueError("Match request not found")
+            
+            if match_request.status != MatchStatus.REQUESTED:
+                raise ValueError("Match request is not in REQUESTED status")
+            
+            # Update match request status
+            match_request.status = MatchStatus.CONFIRMED
+            match_request.score = score
+            uow.match_requests.update(match_request)
+            
+            # Create match
+            match_id = MatchId.new()
+            match = Match(
+                id=match_id,
+                user_id=match_request.user_id,
+                opportunity_id=match_request.opportunity_id,
+                created_at=datetime.now(),
+                status=MatchStatus.CONFIRMED,
+                score=score
+            )
+            
+            uow.matches.add(match)
+            uow.commit()
         
-        # Availability scoring (30% of total score) - simplified for demo
-        availability_score = 0.8 if profile.availability else 0.3
+        self._logger.info(f"Approved match request {request_id.value}")
+        return match
+    
+    def reject_match_request(self, request_id: MatchRequestId) -> bool:
+        """Reject a match request."""
+        with self._uow_manager.get_uow() as uow:
+            match_request = uow.match_requests.get_by_id(request_id)
+            if not match_request:
+                return False
+            
+            if match_request.status != MatchStatus.REQUESTED:
+                raise ValueError("Match request is not in REQUESTED status")
+            
+            match_request.status = MatchStatus.REJECTED
+            uow.match_requests.update(match_request)
+            uow.commit()
         
-        # Preference scoring (20% of total score) - based on tags
-        preference_score = self._calculate_preference_score(profile.tags, opportunity)
+        self._logger.info(f"Rejected match request {request_id.value}")
+        return True
+    
+    def get_matches_by_user(self, user_id: UserId) -> List[Match]:
+        """Get all matches for a user."""
+        with self._uow_manager.get_uow() as uow:
+            return uow.matches.get_by_user(user_id)
+    
+    def get_matches_by_opportunity(self, opportunity_id: OpportunityId) -> List[Match]:
+        """Get all matches for an opportunity."""
+        with self._uow_manager.get_uow() as uow:
+            return uow.matches.get_by_opportunity(opportunity_id)
+    
+    def cancel_match(self, match_id: MatchId) -> bool:
+        """Cancel an existing match."""
+        with self._uow_manager.get_uow() as uow:
+            match = uow.matches.get_by_id(match_id)
+            if not match:
+                return False
+            
+            match.status = MatchStatus.CANCELLED
+            uow.matches.update(match)
+            uow.commit()
         
-        # Distance scoring (10% of total score) - simplified for demo
-        distance_score = 0.7  # Would calculate based on location in real implementation
+        self._logger.info(f"Cancelled match {match_id.value}")
+        return True
+    
+    def find_matching_opportunities(
+        self,
+        user_id: UserId,
+        min_score: float = 0.5
+    ) -> List[Tuple[Opportunity, MatchScore]]:
+        """Find opportunities that match a volunteer's profile."""
+        with self._uow_manager.get_uow() as uow:
+            profile = uow.profiles.get(user_id)
+            if not profile:
+                return []
+            
+            all_opportunities = uow.opportunities.list_all()
         
-        # Calculate weighted total
+        matches = []
+        for opportunity in all_opportunities:
+            score = self._calculate_match_score(profile, opportunity)
+            if score.total_score >= min_score:
+                matches.append((opportunity, score))
+        
+        # Sort by score (highest first)
+        matches.sort(key=lambda x: x[1].total_score, reverse=True)
+        return matches
+    
+    def find_matching_volunteers(
+        self,
+        opportunity_id: OpportunityId,
+        min_score: float = 0.5
+    ) -> List[Tuple[Profile, MatchScore]]:
+        """Find volunteers that match an opportunity's requirements."""
+        with self._uow_manager.get_uow() as uow:
+            opportunity = uow.opportunities.get_by_id(opportunity_id)
+            if not opportunity:
+                return []
+            
+            all_profiles = uow.profiles.get_all()
+        
+        matches = []
+        for profile in all_profiles:
+            score = self._calculate_match_score(profile, opportunity)
+            if score.total_score >= min_score:
+                matches.append((profile, score))
+        
+        # Sort by score (highest first)
+        matches.sort(key=lambda x: x[1].total_score, reverse=True)
+        return matches
+    
+    def _calculate_match_score(self, profile: Profile, opportunity: Opportunity) -> MatchScore:
+        """Calculate match score between a profile and an opportunity."""
+        # Skill matching (40% weight)
+        skill_score = self._calculate_skill_match(profile.skills, opportunity.required_skills)
+        
+        # Availability matching (30% weight)
+        availability_score = self._calculate_availability_match(
+            profile.availability,
+            opportunity.min_hours or 0
+        )
+        
+        # Preference matching (20% weight) - based on tags
+        preference_score = self._calculate_preference_match(profile.tags, opportunity.title)
+        
+        # Distance matching (10% weight) - placeholder for now
+        distance_score = 0.5  # Would calculate based on location in real implementation
+        
+        # Calculate total score
         total_score = (
-            skill_score * 0.4 +
-            availability_score * 0.3 +
-            preference_score * 0.2 +
-            distance_score * 0.1
+            0.4 * skill_score +
+            0.3 * availability_score +
+            0.2 * preference_score +
+            0.1 * distance_score
         )
         
         return MatchScore(
@@ -200,220 +291,41 @@ class VolunteerMatchingService:
             distance_score=distance_score
         )
     
-    def find_matching_volunteers(
-        self,
-        opportunity_id: OpportunityId,
-        profiles: List[Profile],
-        min_score: float = 0.5
-    ) -> List[Tuple[Profile, MatchScore]]:
-        """Find volunteers that match an opportunity above the minimum score threshold."""
-        opportunity = self.get_opportunity_by_id(opportunity_id)
-        if not opportunity:
-            return []
-        
-        matches = []
-        
-        for profile in profiles:
-            # Skip if user already has an active request/match for this opportunity
-            existing_request = self._find_user_request_for_opportunity(profile.user_id, opportunity_id)
-            if existing_request and existing_request.status in [MatchStatus.PENDING, MatchStatus.ACCEPTED]:
-                continue
-            
-            score = self.calculate_match_score(profile, opportunity)
-            if score.total_score >= min_score:
-                matches.append((profile, score))
-        
-        # Sort by total score (descending)
-        matches.sort(key=lambda x: x[1].total_score, reverse=True)
-        
-        return matches
-    
-    def find_matching_opportunities(
-        self,
-        user_id: UserId,
-        profile: Profile,
-        min_score: float = 0.5
-    ) -> List[Tuple[Opportunity, MatchScore]]:
-        """Find opportunities that match a volunteer profile above the minimum score threshold."""
-        matches = []
-        
-        for opportunity in self._opportunities.values():
-            # Skip if user already has an active request/match for this opportunity
-            existing_request = self._find_user_request_for_opportunity(user_id, opportunity.id)
-            if existing_request and existing_request.status in [MatchStatus.PENDING, MatchStatus.ACCEPTED]:
-                continue
-            
-            score = self.calculate_match_score(profile, opportunity)
-            if score.total_score >= min_score:
-                matches.append((opportunity, score))
-        
-        # Sort by total score (descending)
-        matches.sort(key=lambda x: x[1].total_score, reverse=True)
-        
-        return matches
-    
-    def approve_match_request(self, request_id: MatchRequestId) -> Optional[Match]:
-        """Approve a match request and create a match."""
-        request = self._match_requests.get(str(request_id.value))
-        if not request:
-            return None
-        
-        if request.status != MatchStatus.PENDING:
-            raise ValueError("Can only approve pending match requests")
-        
-        # Check if opportunity still has slots available
-        opportunity = self.get_opportunity_by_id(request.opportunity_id)
-        if not opportunity:
-            raise ValueError("Opportunity no longer exists")
-        
-        if opportunity.max_slots:
-            current_matches = self._count_matches_for_opportunity(request.opportunity_id)
-            if current_matches >= opportunity.max_slots:
-                raise ValueError("Opportunity is at maximum capacity")
-        
-        # Update request status
-        request.status = MatchStatus.ACCEPTED
-        
-        # Create match
-        match_id = MatchId.new()
-        match = Match(
-            id=match_id,
-            user_id=request.user_id,
-            opportunity_id=request.opportunity_id,
-            created_at=datetime.now(),
-            status=MatchStatus.ACCEPTED,
-            score=request.score
-        )
-        
-        self._matches[str(match_id.value)] = match
-        self._logger.info(f"Approved match request {request_id.value}, created match {match_id.value}")
-        
-        return match
-    
-    def reject_match_request(self, request_id: MatchRequestId, reason: Optional[str] = None) -> bool:
-        """Reject a match request."""
-        request = self._match_requests.get(str(request_id.value))
-        if not request:
-            return False
-        
-        if request.status != MatchStatus.PENDING:
-            raise ValueError("Can only reject pending match requests")
-        
-        request.status = MatchStatus.REJECTED
-        self._logger.info(f"Rejected match request {request_id.value}")
-        
-        return True
-    
-    def get_match_requests_by_opportunity(self, opportunity_id: OpportunityId) -> List[MatchRequest]:
-        """Get all match requests for an opportunity."""
-        return [
-            request for request in self._match_requests.values()
-            if request.opportunity_id.value == opportunity_id.value
-        ]
-    
-    def get_match_requests_by_user(self, user_id: UserId) -> List[MatchRequest]:
-        """Get all match requests by a user."""
-        return [
-            request for request in self._match_requests.values()
-            if request.user_id.value == user_id.value
-        ]
-    
-    def get_matches_by_user(self, user_id: UserId) -> List[Match]:
-        """Get all matches for a user."""
-        return [
-            match for match in self._matches.values()
-            if match.user_id.value == user_id.value
-        ]
-    
-    def get_matches_by_opportunity(self, opportunity_id: OpportunityId) -> List[Match]:
-        """Get all matches for an opportunity."""
-        return [
-            match for match in self._matches.values()
-            if match.opportunity_id.value == opportunity_id.value
-        ]
-    
-    def cancel_match(self, match_id: MatchId) -> bool:
-        """Cancel an existing match."""
-        match = self._matches.get(str(match_id.value))
-        if not match:
-            return False
-        
-        # Remove the match
-        del self._matches[str(match_id.value)]
-        
-        # Find and update corresponding match request
-        for request in self._match_requests.values():
-            if (request.user_id.value == match.user_id.value and
-                request.opportunity_id.value == match.opportunity_id.value and
-                request.status == MatchStatus.ACCEPTED):
-                request.status = MatchStatus.REJECTED
-                break
-        
-        self._logger.info(f"Cancelled match {match_id.value}")
-        return True
-    
-    def expire_old_requests(self, days_old: int = 30) -> int:
-        """Expire match requests older than specified days."""
-        cutoff_date = datetime.now() - timedelta(days=days_old)
-        expired_count = 0
-        
-        for request in self._match_requests.values():
-            if (request.status == MatchStatus.PENDING and
-                request.requested_at < cutoff_date):
-                request.status = MatchStatus.EXPIRED
-                expired_count += 1
-        
-        self._logger.info(f"Expired {expired_count} old match requests")
-        return expired_count
-    
-    def _calculate_skill_match_score(self, profile_skills: List[str], required_skills: List[str]) -> float:
-        """Calculate skill match score between 0.0 and 1.0."""
+    def _calculate_skill_match(self, user_skills: List[str], required_skills: List[str]) -> float:
+        """Calculate skill match score."""
         if not required_skills:
             return 1.0
         
-        if not profile_skills:
+        user_skills_lower = set(skill.lower() for skill in user_skills)
+        required_skills_lower = set(skill.lower() for skill in required_skills)
+        
+        matched_skills = user_skills_lower.intersection(required_skills_lower)
+        return len(matched_skills) / len(required_skills_lower)
+    
+    def _calculate_availability_match(self, availability_windows, min_hours: float) -> float:
+        """Calculate availability match score."""
+        if not availability_windows:
             return 0.0
         
-        profile_skill_set = set(skill.lower() for skill in profile_skills)
-        required_skill_set = set(skill.lower() for skill in required_skills)
+        # Simple heuristic: more availability windows = higher score
+        # In real implementation, would check actual time availability
+        total_available_hours = len(availability_windows) * 4  # Assume 4 hours per window
         
-        matching_skills = profile_skill_set.intersection(required_skill_set)
-        return len(matching_skills) / len(required_skill_set)
+        if total_available_hours >= min_hours:
+            return 1.0
+        else:
+            return total_available_hours / max(min_hours, 1)
     
-    def _calculate_preference_score(self, profile_tags: List[str], opportunity: Opportunity) -> float:
-        """Calculate preference score based on tags and opportunity characteristics."""
-        # This is a simplified implementation
-        # In reality, you'd have more sophisticated preference matching
+    def _calculate_preference_match(self, user_tags: List[str], opportunity_title: str) -> float:
+        """Calculate preference match score based on tags."""
+        if not user_tags:
+            return 0.5  # Neutral score if no tags
         
-        if not profile_tags:
-            return 0.5  # Neutral score
+        # Check if any tags appear in opportunity title
+        title_lower = opportunity_title.lower()
+        matching_tags = sum(1 for tag in user_tags if tag.lower() in title_lower)
         
-        # Look for relevant tags
-        score = 0.5
-        tag_set = set(tag.lower() for tag in profile_tags)
+        if matching_tags > 0:
+            return min(1.0, matching_tags * 0.5)
         
-        # Boost score for relevant tags
-        if "experience" in tag_set:
-            score += 0.2
-        if "leadership" in tag_set and "lead" in opportunity.title.lower():
-            score += 0.2
-        if "outdoors" in tag_set and any(word in opportunity.title.lower() for word in ["park", "cleanup", "outdoor"]):
-            score += 0.3
-        
-        return min(score, 1.0)  # Cap at 1.0
-    
-    def _find_user_request_for_opportunity(self, user_id: UserId, opportunity_id: OpportunityId) -> Optional[MatchRequest]:
-        """Find a user's request for a specific opportunity."""
-        for request in self._match_requests.values():
-            if (request.user_id.value == user_id.value and
-                request.opportunity_id.value == opportunity_id.value):
-                return request
-        return None
-    
-    def _count_matches_for_opportunity(self, opportunity_id: OpportunityId) -> int:
-        """Count the number of active matches for an opportunity."""
-        return len([
-            match for match in self._matches.values()
-            if match.opportunity_id.value == opportunity_id.value and
-            match.status == MatchStatus.ACCEPTED
-        ])
+        return 0.3  # Base score if no direct matches

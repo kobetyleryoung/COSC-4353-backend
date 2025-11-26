@@ -1,14 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.event_management import EventManagementService
 from src.domain.events import Event, EventId, Location
 from src.domain.users import UserId
+from src.config.database_settings import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.events import (
     EventCreateSchema, EventUpdateSchema, EventResponseSchema,
-    EventListResponseSchema, EventSearchSchema, LocationSchema
+    LocationSchema
 )
 
 from src.config.logging_config import logger
@@ -17,14 +18,8 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_event_service() -> EventManagementService:
-    return EventManagementService(logger)
+def _get_event_service(uow_manager: UnitOfWorkManager = Depends(get_uow)) -> EventManagementService:
+    return EventManagementService(uow_manager, logger)
 
 def _convert_location_to_schema(location) -> Optional[LocationSchema]:
     """Convert Location domain model to LocationSchema"""
@@ -52,9 +47,9 @@ def _convert_event_to_response(event: Event) -> EventResponseSchema:
         status=event.status.name
     )
 
-def _convert_events_list_to_response_schema(events: List[Event], total: int) -> EventListResponseSchema:
-    """Convert list of Events to EventListResponseSchema"""
-    return EventListResponseSchema(
+def _convert_events_list_to_response_schema(events: List[Event], total: int) -> EventResponseSchema:
+    """Convert list of Events to EventResponseSchema"""
+    return EventResponseSchema(
         events=[_convert_event_to_response(event) for event in events],
         total=total
     )
@@ -71,7 +66,7 @@ def _convert_location_schema_to_domain(location_schema: LocationSchema) -> Locat
 
 #endregion
 
-@router.get("/", response_model=EventListResponseSchema)
+@router.get("/", response_model=EventResponseSchema)
 async def get_all_events(
     event_service: EventManagementService = Depends(_get_event_service)
 ):
@@ -87,7 +82,7 @@ async def get_all_events(
         )
 
 
-@router.get("/published", response_model=EventListResponseSchema)
+@router.get("/published", response_model=EventResponseSchema)
 async def get_published_events(
     event_service: EventManagementService = Depends(_get_event_service)
 ):
@@ -103,7 +98,7 @@ async def get_published_events(
         )
 
 
-@router.get("/upcoming", response_model=EventListResponseSchema)
+@router.get("/upcoming", response_model=EventResponseSchema)
 async def get_upcoming_events(
     event_service: EventManagementService = Depends(_get_event_service)
 ):
@@ -301,9 +296,9 @@ async def delete_event(
         )
 
 
-@router.post("/search", response_model=EventListResponseSchema)
+@router.post("/search", response_model=EventResponseSchema)
 async def search_events(
-    search_params: EventSearchSchema,
+    search_params: LocationSchema,
     event_service: EventManagementService = Depends(_get_event_service)
 ):
     """Search events by various criteria."""

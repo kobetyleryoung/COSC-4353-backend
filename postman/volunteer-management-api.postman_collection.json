@@ -211,7 +211,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"skills\": [\"teamwork\"],\n  \"city\": \"Houston\",\n  \"state\": \"TX\",\n  \"status\": \"published\"\n}"
+							"raw": "{\n  \"name\": \"Central Park\",\n  \"city\": \"Houston\",\n  \"state\": \"TX\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/events/search",
@@ -236,9 +236,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/",
+							"raw": "{{base_url}}/api/v1/profiles/",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", ""]
+							"path": ["api", "v1", "profiles", ""]
 						}
 					}
 				},
@@ -253,9 +253,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}"]
+							"path": ["api", "v1", "profiles", "{{user_id}}"]
 						}
 					}
 				},
@@ -275,12 +275,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"user123\",\n  \"full_name\": \"John Doe\",\n  \"address1\": \"123 Main St\",\n  \"city\": \"Houston\",\n  \"state\": \"TX\",\n  \"zipcode\": \"77001\",\n  \"skills\": [\"teamwork\", \"leadership\"],\n  \"preferences\": \"Outdoor activities\",\n  \"availability\": [\"2024-02-15\", \"2024-02-16\"]\n}"
+							"raw": "{\n  \"display_name\": \"John Doe\",\n  \"phone\": \"+1-713-555-0123\",\n  \"skills\": [\"teamwork\", \"leadership\"],\n  \"tags\": [\"volunteer\", \"community\"],\n  \"availability\": [\n    {\n      \"weekday\": 0,\n      \"start\": \"09:00\",\n      \"end\": \"17:00\"\n    },\n    {\n      \"weekday\": 5,\n      \"start\": \"10:00\",\n      \"end\": \"16:00\"\n    }\n  ]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/",
+							"raw": "{{base_url}}/api/v1/profiles/",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", ""]
+							"path": ["api", "v1", "profiles", ""]
 						}
 					}
 				},
@@ -300,17 +300,17 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"full_name\": \"John Updated Doe\",\n  \"skills\": [\"teamwork\", \"leadership\", \"communication\"],\n  \"preferences\": \"Indoor and outdoor activities\"\n}"
+							"raw": "{\n  \"display_name\": \"John Updated Doe\",\n  \"phone\": \"+1-713-555-9999\",\n  \"skills\": [\"teamwork\", \"leadership\", \"communication\"]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}"]
+							"path": ["api", "v1", "profiles", "{{user_id}}"]
 						}
 					}
 				},
 				{
-					"name": "Add Skills to Profile",
+					"name": "Add Skill to Profile",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -325,12 +325,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"skills\": [\"project_management\", \"public_speaking\"]\n}"
+							"raw": "{\n  \"skill\": \"project_management\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/skills",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/skills",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "skills"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "skills"]
 						}
 					}
 				},
@@ -345,14 +345,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/skills/{{skill}}",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/skills/{{skill}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "skills", "{{skill}}"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "skills", "{{skill}}"]
 						}
 					}
 				},
 				{
-					"name": "Add Tags to Profile",
+					"name": "Add Tag to Profile",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -367,12 +367,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"tags\": [\"volunteer\", \"community_leader\"]\n}"
+							"raw": "{\n  \"tag\": \"community_leader\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/tags",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/tags",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "tags"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "tags"]
 						}
 					}
 				},
@@ -387,14 +387,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/tags/{{tag}}",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/tags/{{tag}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "tags", "{{tag}}"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "tags", "{{tag}}"]
 						}
 					}
 				},
 				{
-					"name": "Set User Availability",
+					"name": "Add Availability Window",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -409,29 +409,37 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"availability\": [\"2024-02-15\", \"2024-02-16\", \"2024-02-17\"]\n}"
+							"raw": "{\n  \"weekday\": 3,\n  \"start\": \"14:00\",\n  \"end\": \"18:00\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/availability",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/availability",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "availability"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "availability"]
 						}
 					}
 				},
 				{
-					"name": "Clear User Availability",
+					"name": "Remove Availability Window",
 					"request": {
 						"method": "DELETE",
 						"header": [
 							{
 								"key": "Authorization",
 								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"weekday\": 3,\n  \"start\": \"14:00\",\n  \"end\": \"18:00\"\n}"
+						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/availability",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/availability",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "availability"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "availability"]
 						}
 					}
 				},
@@ -446,9 +454,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/search/by-skills?skills=teamwork,leadership",
+							"raw": "{{base_url}}/api/v1/profiles/search/by-skills?skills=teamwork,leadership",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "search", "by-skills"],
+							"path": ["api", "v1", "profiles", "search", "by-skills"],
 							"query": [
 								{
 									"key": "skills",
@@ -469,9 +477,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/search/by-tags?tags=volunteer,community_leader",
+							"raw": "{{base_url}}/api/v1/profiles/search/by-tags?tags=volunteer,community_leader",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "search", "by-tags"],
+							"path": ["api", "v1", "profiles", "search", "by-tags"],
 							"query": [
 								{
 									"key": "tags",
@@ -492,9 +500,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}/stats",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}/stats",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}", "stats"]
+							"path": ["api", "v1", "profiles", "{{user_id}}", "stats"]
 						}
 					}
 				},
@@ -509,9 +517,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/profile/{{user_id}}",
+							"raw": "{{base_url}}/api/v1/profiles/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "profile", "{{user_id}}"]
+							"path": ["api", "v1", "profiles", "{{user_id}}"]
 						}
 					}
 				}
@@ -587,7 +595,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"title\": \"Team Leader\",\n  \"description\": \"Lead a team of volunteers during the cleanup\",\n  \"required_skills\": [\"leadership\", \"teamwork\"],\n  \"time_commitment\": \"4 hours\",\n  \"location\": \"Central Park Entrance\"\n}"
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"title\": \"Team Leader\",\n  \"description\": \"Lead a team of volunteers during the cleanup\",\n  \"required_skills\": [\"leadership\", \"teamwork\"],\n  \"min_hours\": 4.0,\n  \"max_slots\": 2\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/volunteer-matching/opportunities",
@@ -612,7 +620,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"message\": \"I would like to volunteer for this opportunity\"\n}"
+							"raw": "{\n  \"opportunity_id\": \"{{opportunity_id}}\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/volunteer-matching/match-requests",
@@ -880,7 +888,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"participation_date\": \"2024-02-15\",\n  \"hours_volunteered\": 4.5,\n  \"role\": \"Team Leader\",\n  \"feedback\": \"Great experience leading the team\",\n  \"status\": \"completed\"\n}"
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"role\": \"Team Leader\",\n  \"hours\": 4.5,\n  \"date\": \"2025-02-15T09:00:00Z\",\n  \"notes\": \"Great experience leading the team\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/volunteer-history/",
@@ -905,7 +913,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"hours_volunteered\": 5.0,\n  \"feedback\": \"Excellent experience leading the team and helping the community\",\n  \"status\": \"completed\"\n}"
+							"raw": "{\n  \"role\": \"Team Leader\",\n  \"hours\": 5.0,\n  \"notes\": \"Excellent experience leading the team and helping the community\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/volunteer-history/{{entry_id}}",
@@ -1127,7 +1135,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"type\": \"general\",\n  \"title\": \"System Maintenance\",\n  \"message\": \"The system will be under maintenance tonight from 11 PM to 1 AM\",\n  \"priority\": \"medium\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"subject\": \"System Maintenance\",\n  \"body\": \"The system will be under maintenance tonight from 11 PM to 1 AM\",\n  \"notification_type\": \"profile_update_reminder\",\n  \"channel\": \"EMAIL\",\n  \"priority\": \"normal\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/send",
@@ -1152,7 +1160,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"role\": \"Team Leader\",\n  \"additional_info\": \"Please arrive 15 minutes early for briefing\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"event_date\": \"2025-02-15T09:00:00Z\",\n  \"event_location\": \"Central Park\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/event-assignment",
@@ -1177,7 +1185,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"reminder_time\": \"24_hours\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"event_date\": \"2025-02-15T09:00:00Z\",\n  \"event_location\": \"Central Park\",\n  \"hours_before\": 24\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/event-reminder",
@@ -1202,7 +1210,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"update_type\": \"time_change\",\n  \"details\": \"Event start time has been moved from 9 AM to 10 AM\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"update_details\": \"Event start time has been moved from 9 AM to 10 AM\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/event-update",
@@ -1227,7 +1235,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"reason\": \"Weather conditions\",\n  \"reschedule_info\": \"Event will be rescheduled for next Saturday\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"reason\": \"Weather conditions - event will be rescheduled for next Saturday\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/event-cancellation",
@@ -1252,7 +1260,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"next_steps\": \"Check your email for further instructions\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"opportunity_title\": \"Team Leader\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/match-request-approved",
@@ -1277,7 +1285,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"reason\": \"Position already filled\",\n  \"alternative_suggestions\": \"Check out similar opportunities in your area\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"opportunity_title\": \"Team Leader\",\n  \"reason\": \"Position already filled - check out similar opportunities in your area\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/match-request-rejected",
@@ -1302,7 +1310,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"opportunity_id\": \"{{opportunity_id}}\",\n  \"match_score\": 85,\n  \"why_matched\": \"Matches your skills in leadership and teamwork\"\n}"
+							"raw": "{\n  \"recipient_id\": \"{{user_id}}\",\n  \"event_title\": \"Community Cleanup\",\n  \"opportunity_title\": \"Team Leader\",\n  \"matching_skills\": [\"leadership\", \"teamwork\"]\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/new-opportunity",
@@ -1378,7 +1386,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email_notifications\": true,\n  \"sms_notifications\": false,\n  \"push_notifications\": true,\n  \"event_reminders\": true,\n  \"match_notifications\": true,\n  \"system_notifications\": false\n}"
+							"raw": "{\n  \"email\": true,\n  \"sms\": false,\n  \"push\": true,\n  \"in_app\": true\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/notifications/user/{{user_id}}/preferences",
