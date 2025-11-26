@@ -17,6 +17,7 @@ class AvailabilityWindowSchema(BaseModel):
 
 
 class ProfileCreateSchema(BaseModel):
+    email: str = Field(..., description="User email address")
     display_name: str = Field(..., min_length=1, max_length=100, description="Display name")
     phone: Optional[str] = Field(None, max_length=20, description="Phone number")
     skills: List[str] = Field(default_factory=list, description="User skills")
@@ -34,6 +35,7 @@ class ProfileUpdateSchema(BaseModel):
 
 class ProfileResponseSchema(BaseModel):
     user_id: UUID
+    email: str
     display_name: Optional[str]
     phone: Optional[str]
     skills: List[str]

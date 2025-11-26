@@ -90,7 +90,7 @@ class EventManagementService:
 
     def get_upcoming_events(self) -> List[Event]:
         now = datetime.now()
-        return self.repo.list_upcoming(now)
+        return self.repo.list_upcoming(as_of=now)
 
     # -----------------------------
     # UPDATE METHODS

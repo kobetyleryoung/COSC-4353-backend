@@ -7,71 +7,15 @@ from logging import Logger
 
 from src.domain.profiles import Profile, AvailabilityWindow, Skill
 from src.domain.users import UserId
+from src.domain.repositories import ProfileRepository
 
 
 class ProfileManagementService:
     """Service for managing user profiles including location, skills, preferences, and availability."""
     
-    def __init__(self, logger: Logger):
+    def __init__(self, logger: Logger, profile_repository: ProfileRepository):
         self._logger = logger
-        # Hard-coded data storage (no database implementation)
-        self._profiles: dict[str, Profile] = {}
-        self._initialize_sample_data()
-    
-    def _initialize_sample_data(self) -> None:
-        """Initialize with sample user profiles."""
-        # Sample profile 1
-        user1_id = UserId.new()
-        profile1 = Profile(
-            user_id=user1_id,
-            display_name="John Smith",
-            phone="555-123-4567",
-            skills=["Physical Labor", "Customer Service", "First Aid"],
-            tags=["spanish", "driver", "experience"],
-            availability=[
-                AvailabilityWindow(weekday=1, start=time(9, 0), end=time(17, 0)),  # Tuesday
-                AvailabilityWindow(weekday=5, start=time(10, 0), end=time(16, 0)),  # Saturday
-                AvailabilityWindow(weekday=6, start=time(8, 0), end=time(12, 0)),   # Sunday
-            ],
-            updated_at=datetime.now()
-        )
-        self._profiles[str(user1_id.value)] = profile1
-        
-        # Sample profile 2
-        user2_id = UserId.new()
-        profile2 = Profile(
-            user_id=user2_id,
-            display_name="Sarah Johnson",
-            phone="555-987-6543",
-            skills=["Communication", "Organization", "Teaching", "Event Planning"],
-            tags=["bilingual", "experience", "leadership"],
-            availability=[
-                AvailabilityWindow(weekday=2, start=time(14, 0), end=time(18, 0)),  # Wednesday
-                AvailabilityWindow(weekday=3, start=time(10, 0), end=time(15, 0)),  # Thursday
-                AvailabilityWindow(weekday=6, start=time(9, 0), end=time(14, 0)),   # Sunday
-            ],
-            updated_at=datetime.now()
-        )
-        self._profiles[str(user2_id.value)] = profile2
-        
-        # Sample profile 3
-        user3_id = UserId.new()
-        profile3 = Profile(
-            user_id=user3_id,
-            display_name="Mike Davis",
-            phone="555-456-7890",
-            skills=["Environmental Awareness", "Physical Labor", "Patience"],
-            tags=["outdoors", "environmental", "youth"],
-            availability=[
-                AvailabilityWindow(weekday=0, start=time(18, 0), end=time(21, 0)),  # Monday
-                AvailabilityWindow(weekday=4, start=time(17, 0), end=time(20, 0)),  # Friday
-                AvailabilityWindow(weekday=5, start=time(8, 0), end=time(18, 0)),   # Saturday
-            ],
-            updated_at=datetime.now()
-        )
-        self._profiles[str(user3_id.value)] = profile3
-        
-        self._logger.info(f"Initialized {len(self._profiles)} sample profiles")
+        self._profile_repository = profile_repository
     
     def create_profile(
         self,
@@ -84,7 +28,8 @@ class ProfileManagementService:
     ) -> Profile:
         """Create a new user profile."""
         # Validation
-        if str(user_id.value) in self._profiles:
+        existing_profile = self._profile_repository.get(user_id)
+        if existing_profile:
             raise ValueError("Profile already exists for this user")
         
         if not display_name or len(display_name.strip()) == 0:
@@ -121,18 +66,14 @@ class ProfileManagementService:
             updated_at=datetime.now()
         )
         
-        self._profiles[str(user_id.value)] = profile
+        self._profile_repository.save(profile)
         self._logger.info(f"Created profile for user: {display_name} (ID: {user_id.value})")
         
         return profile
     
     def get_profile_by_user_id(self, user_id: UserId) -> Optional[Profile]:
         """Retrieve a profile by user ID."""
-        return self._profiles.get(str(user_id.value))
-    
-    def get_all_profiles(self) -> List[Profile]:
-        """Retrieve all profiles."""
-        return list(self._profiles.values())
+        return self._profile_repository.get(user_id)
     
     def update_profile(
         self,
@@ -180,6 +121,7 @@ class ProfileManagementService:
             profile.availability = availability
         
         profile.updated_at = datetime.now()
+        self._profile_repository.save(profile)
         self._logger.info(f"Updated profile for user: {profile.display_name} (ID: {user_id.value})")
         
         return profile
@@ -202,6 +144,7 @@ class ProfileManagementService:
         
         profile.skills.append(skill)
         profile.updated_at = datetime.now()
+        self._profile_repository.save(profile)
         self._logger.info(f"Added skill '{skill}' to user {user_id.value}")
         return True
     
@@ -214,6 +157,7 @@ class ProfileManagementService:
         if skill in profile.skills:
             profile.skills.remove(skill)
             profile.updated_at = datetime.now()
+            self._profile_repository.save(profile)
             self._logger.info(f"Removed skill '{skill}' from user {user_id.value}")
             return True
         
@@ -237,6 +181,7 @@ class ProfileManagementService:
         
         profile.tags.append(tag)
         profile.updated_at = datetime.now()
+        self._profile_repository.save(profile)
         self._logger.info(f"Added tag '{tag}' to user {user_id.value}")
         
         return True
@@ -251,6 +196,7 @@ class ProfileManagementService:
         if tag in profile.tags:
             profile.tags.remove(tag)
             profile.updated_at = datetime.now()
+            self._profile_repository.save(profile)
             self._logger.info(f"Removed tag '{tag}' from user {user_id.value}")
             return True
         
@@ -273,6 +219,7 @@ class ProfileManagementService:
         
         profile.availability.append(window)
         profile.updated_at = datetime.now()
+        self._profile_repository.save(profile)
         self._logger.info(f"Added availability window to user {user_id.value}")
         
         return True
@@ -289,57 +236,21 @@ class ProfileManagementService:
                 existing_window.end == window.end):
                 profile.availability.pop(i)
                 profile.updated_at = datetime.now()
+                self._profile_repository.save(profile)
                 self._logger.info(f"Removed availability window from user {user_id.value}")
                 return True
         
         return False
     
-    def get_profiles_by_skills(self, skills: List[Skill]) -> List[Profile]:
-        """Get profiles that have any of the specified skills."""
-        matching_profiles = []
-        skill_set = set(skill.lower() for skill in skills)
-        
-        for profile in self._profiles.values():
-            profile_skills = set(skill.lower() for skill in profile.skills)
-            if skill_set.intersection(profile_skills):
-                matching_profiles.append(profile)
-        
-        return matching_profiles
-    
-    def get_profiles_by_tags(self, tags: List[str]) -> List[Profile]:
-        """Get profiles that have any of the specified tags."""
-        matching_profiles = []
-        tag_set = set(tag.lower() for tag in tags)
-        
-        for profile in self._profiles.values():
-            profile_tags = set(tag.lower() for tag in profile.tags)
-            if tag_set.intersection(profile_tags):
-                matching_profiles.append(profile)
-        
-        return matching_profiles
-    
-    def get_available_profiles(self, weekday: int, start_time: time, end_time: time) -> List[Profile]:
-        """Get profiles that are available during the specified time window."""
-        available_profiles = []
-        
-        for profile in self._profiles.values():
-            for window in profile.availability:
-                if (window.weekday == weekday and
-                    window.start <= start_time and
-                    window.end >= end_time):
-                    available_profiles.append(profile)
-                    break
-        
-        return available_profiles
-    
     def delete_profile(self, user_id: UserId) -> bool:
         """Delete a user's profile."""
-        if str(user_id.value) not in self._profiles:
+        profile = self._profile_repository.get(user_id)
+        if not profile:
             return False
         
-        profile = self._profiles.pop(str(user_id.value))
-        self._logger.info(f"Deleted profile for user: {profile.display_name} (ID: {user_id.value})")
-        return True
+        # Note: Repository protocol doesn't include delete() method yet
+        self._logger.warning(f"Delete profile requested but not fully implemented for user ID: {user_id.value}")
+        return False
     
     def _validate_phone(self, phone: str) -> bool:
         """Validate phone number format."""

@@ -141,14 +141,15 @@ async def get_event_by_id(
 @router.post("/", response_model=EventResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreateSchema,
-    event_service: EventManagementService = Depends(_get_event_service)
+    uow=Depends(get_uow)
 ):
-    """Create a new event."""
+    """Create a new event and automatically create a default volunteer opportunity for it."""
     try:
         # Convert schema to domain objects
         location = _convert_location_schema_to_domain(event_data.location)
         admin_id = UserId.new()  # In real app, get from authenticated user
         
+        event_service = EventManagementService(uow.session, logger)
         event = event_service.create_event(
             title=event_data.title,
             description=event_data.description,
@@ -157,6 +158,18 @@ async def create_event(
             starts_at=event_data.starts_at,
             ends_at=event_data.ends_at,
             capacity=event_data.capacity
+        )
+        
+        # Automatically create a default volunteer opportunity for this event
+        from src.services.volunteer_matching import VolunteerMatchingService
+        matching_service = VolunteerMatchingService(logger, uow.opportunities, uow.matches, uow.match_requests)
+        matching_service.create_opportunity(
+            event_id=event.id,
+            title=f"Volunteer for {event_data.title}",
+            description=event_data.description,
+            required_skills=event_data.required_skills,
+            min_hours=None,
+            max_slots=event_data.capacity
         )
         
         return _convert_event_to_response(event)

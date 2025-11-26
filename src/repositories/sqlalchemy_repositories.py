@@ -329,6 +329,25 @@ class SqlAlchemyEventRepository:
             # Add new
             self.add(event)
     
+    def get_by_id(self, event_id: EventId) -> Optional[Event]:
+        """Get event by ID (alias for get)."""
+        return self.get(event_id)
+    
+    def list_all(self) -> list[Event]:
+        """List all events."""
+        event_models = self.session.query(EventModel).all()
+        return [self._model_to_domain(model) for model in event_models]
+    
+    def list_by_status(self, status: EventStatus) -> list[Event]:
+        """List events by status."""
+        status_enum = _map_event_status_to_enum(status)
+        event_models = (
+            self.session.query(EventModel)
+            .filter(EventModel.status == status_enum)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in event_models]
+    
     def list_upcoming(self, *, limit: int = 50, as_of: datetime | None = None) -> list[Event]:
         """List upcoming events."""
         if as_of is None:
@@ -429,6 +448,15 @@ class SqlAlchemyOpportunityRepository:
         opp_models = (
             self.session.query(OpportunityModel)
             .filter_by(event_id=event_id.value)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in opp_models]
+    
+    def list_all(self, *, limit: int = 100) -> list[Opportunity]:
+        """List all opportunities."""
+        opp_models = (
+            self.session.query(OpportunityModel)
+            .limit(limit)
             .all()
         )
         return [self._model_to_domain(model) for model in opp_models]
@@ -572,6 +600,29 @@ class SqlAlchemyMatchRequestRepository:
             .all()
         )
         return [self._model_to_domain(model) for model in req_models]
+    
+    def list_for_user(self, user_id: UserId, *, limit: int = 100) -> list[MatchRequest]:
+        """List match requests for a user."""
+        req_models = (
+            self.session.query(MatchRequestModel)
+            .filter_by(user_id=user_id.value)
+            .order_by(MatchRequestModel.requested_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in req_models]
+    
+    def find_by_user_and_opportunity(self, user_id: UserId, opp_id: OpportunityId) -> Optional[MatchRequest]:
+        """Find a match request by user and opportunity."""
+        req_model = (
+            self.session.query(MatchRequestModel)
+            .filter_by(user_id=user_id.value, opportunity_id=opp_id.value)
+            .order_by(MatchRequestModel.requested_at.desc())
+            .first()
+        )
+        if not req_model:
+            return None
+        return self._model_to_domain(req_model)
     
     def _domain_to_model(self, req: MatchRequest) -> MatchRequestModel:
         """Convert domain MatchRequest to MatchRequestModel."""

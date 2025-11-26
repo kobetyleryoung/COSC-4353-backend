@@ -2,8 +2,12 @@ from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker
 from src.config.database import Base, schema_Name
 from src.repositories import models
+from src.repositories.database import get_database_url
 
-Database_URL = "postgresql+psycopg2://user:password!@localhost:5432/COSC4353_DB"
+""""
+Change the DATABASE_USER and DATABASE_PASSWORD environment variables before running this script.
+"""
+Database_URL = get_database_url()
 engine = create_engine(Database_URL)
 
 with engine.begin() as conn:

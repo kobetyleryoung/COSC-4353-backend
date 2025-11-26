@@ -1,9 +1,4 @@
-"""
-Database configuration and setup utilities for PostgreSQL.
 
-This module handles SQLAlchemy engine creation and database initialization
-for the volunteer management system using PostgreSQL.
-"""
 from __future__ import annotations
 import os
 from typing import Optional
@@ -19,11 +14,7 @@ from .unit_of_work import UnitOfWorkManager, create_uow_manager
 def get_postgres_url() -> str:
     """
     Get PostgreSQL connection URL from environment variables.
-    
-    Returns:
-        PostgreSQL connection URL
     """
-    # Check for full DATABASE_URL first
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         return database_url
@@ -32,18 +23,22 @@ def get_postgres_url() -> str:
     host = os.getenv("DATABASE_HOST", "localhost")
     port = os.getenv("DATABASE_PORT", "5432")
     database = os.getenv("DATABASE_NAME", "COSC4353_DB")
-    username = os.getenv("DATABASE_USER", "UserName")
-    password = os.getenv("DATABASE_PASSWORD", "Password!")
+    username = os.getenv("DATABASE_USER", "CHANGE_ME!!!!")
+    password = os.getenv("DATABASE_PASSWORD", "CHANGE_ME!!!!")
     
     return f"postgresql://{username}:{password}@{host}:{port}/{database}"
+
+
+# Alias for compatibility
+def get_database_url() -> str:
+    """Alias for get_postgres_url()."""
+    return get_postgres_url()
 
 
 def create_database_engine() -> Engine:
     """
     Create a PostgreSQL SQLAlchemy engine.
-    
-    Returns:
-        Configured SQLAlchemy engine for PostgreSQL
+
     """
     url = get_postgres_url()
     echo = os.getenv("DATABASE_ECHO", "false").lower() == "true"
@@ -60,9 +55,6 @@ def create_database_engine() -> Engine:
 def create_tables(engine: Engine) -> None:
     """
     Create all database tables.
-    
-    Args:
-        engine: SQLAlchemy engine
     """
     logger.info("Creating database tables...")
     Base.metadata.create_all(engine)
@@ -71,11 +63,7 @@ def create_tables(engine: Engine) -> None:
 def drop_tables(engine: Engine) -> None:
     """
     Drop all database tables.
-    
-    Warning: This will delete all data!
-    
-    Args:
-        engine: SQLAlchemy engine
+
     """
     logger.warning("Dropping all database tables...")
     Base.metadata.drop_all(engine)
@@ -84,12 +72,7 @@ def drop_tables(engine: Engine) -> None:
 def check_database_connection(engine: Engine) -> bool:
     """
     Check if the database connection is working.
-    
-    Args:
-        engine: SQLAlchemy engine
-        
-    Returns:
-        True if connection is successful, False otherwise
+
     """
     try:
         with engine.connect() as conn:
@@ -112,8 +95,6 @@ class DatabaseManager:
         """
         Initialize the database connection and setup.
         
-        Args:
-            create_tables_if_not_exist: Whether to create tables if they don't exist
         """
         postgres_url = get_postgres_url()
         logger.info(f"Initializing database connection to PostgreSQL...")
@@ -137,12 +118,6 @@ class DatabaseManager:
     def get_uow_manager(self) -> UnitOfWorkManager:
         """
         Get the Unit of Work manager.
-        
-        Returns:
-            UnitOfWorkManager instance
-            
-        Raises:
-            RuntimeError: If database hasn't been initialized
         """
         if self.uow_manager is None:
             raise RuntimeError("Database not initialized. Call initialize() first.")
@@ -151,12 +126,6 @@ class DatabaseManager:
     def get_engine(self) -> Engine:
         """
         Get the SQLAlchemy engine.
-        
-        Returns:
-            SQLAlchemy Engine instance
-            
-        Raises:
-            RuntimeError: If database hasn't been initialized
         """
         if self.engine is None:
             raise RuntimeError("Database not initialized. Call initialize() first.")

@@ -85,19 +85,26 @@ def shutdown_database():
         logger.info("Database connection closed")
 
 # FastAPI dependency to get Unit of Work
-def get_uow() -> SqlAlchemyUnitOfWork:
+def get_uow():
     """
-    FastAPI dependency to get a Unit of Work instance.
+    FastAPI dependency to get a Unit of Work instance with automatic transaction management.
     
     Usage in FastAPI routes:
         @app.post("/users/")
         def create_user(user_data: dict, uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
-            with uow_manager.get_uow() as uow:
-                # Use uow.users, uow.profiles, etc.
-                uow.commit()
+            # Use uow.users, uow.profiles, etc.
+            # Transaction is automatically committed on success
     """
     uow_manager = get_uow_manager()
-    return uow_manager.create_uow()
+    uow = uow_manager.create_uow()
+    try:
+        yield uow
+        uow.commit()  # Auto-commit on success
+    except Exception:
+        uow.rollback()  # Auto-rollback on error
+        raise
+    finally:
+        uow.session.close()  # Always close session
 
 @asynccontextmanager
 async def database_lifespan(app):
