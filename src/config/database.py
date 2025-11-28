@@ -1,7 +1,8 @@
 from sqlalchemy import MetaData
 from sqlalchemy.orm import declarative_base
 
-schema_Name="COSC4353_DB"
+# Don't specify a schema - use PostgreSQL default 'public' schema
+schema_Name = None
 
 metadata = MetaData(schema=schema_Name)
 

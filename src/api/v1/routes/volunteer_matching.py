@@ -177,11 +177,13 @@ async def create_match_request(
         user_id = UserId.new()
         
         match_request = matching_service.create_match_request(
-            user_id=user_id,
+            user_id=UserId(request_data.user_id),
             opportunity_id=OpportunityId(request_data.opportunity_id)
         )
         
         return _convert_match_request_to_response(match_request)
+    
+    #error handling
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

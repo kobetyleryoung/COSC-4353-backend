@@ -24,12 +24,7 @@ _uow_manager: Optional[UnitOfWorkManager] = None
 def initialize_database(create_tables: bool = True) -> DatabaseManager:
     """
     Initialize the PostgreSQL database connection.
-    
-    Args:
-        create_tables: Whether to create database tables if they don't exist
-        
-    Returns:
-        Configured DatabaseManager instance
+
     """
     global _db_manager, _uow_manager
     
@@ -49,12 +44,6 @@ def initialize_database(create_tables: bool = True) -> DatabaseManager:
 def get_database_manager() -> DatabaseManager:
     """
     Get the global database manager instance.
-    
-    Returns:
-        DatabaseManager instance
-        
-    Raises:
-        RuntimeError: If database hasn't been initialized
     """
     if _db_manager is None:
         raise RuntimeError("Database not initialized. Call initialize_database() first.")
@@ -63,12 +52,7 @@ def get_database_manager() -> DatabaseManager:
 def get_uow_manager() -> UnitOfWorkManager:
     """
     Get the global Unit of Work manager instance.
-    
-    Returns:
-        UnitOfWorkManager instance
-        
-    Raises:
-        RuntimeError: If database hasn't been initialized
+
     """
     if _uow_manager is None:
         raise RuntimeError("Database not initialized. Call initialize_database() first.")
@@ -99,21 +83,16 @@ def get_uow():
     uow = uow_manager.create_uow()
     try:
         yield uow
-        uow.commit()  # Auto-commit on success
+        uow.commit() 
     except Exception:
-        uow.rollback()  # Auto-rollback on error
+        uow.rollback() 
         raise
     finally:
-        uow.session.close()  # Always close session
+        uow.session.close()
 
 @asynccontextmanager
 async def database_lifespan(app):
-    """
-    FastAPI lifespan context manager for database initialization.
-    
-    Usage:
-        app = FastAPI(lifespan=database_lifespan)
-    """
+
     # Startup
     initialize_database()
     logger.info("Database initialized for FastAPI app")

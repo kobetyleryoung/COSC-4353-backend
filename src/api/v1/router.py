@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .routes import events, profile, volunteer_matching, volunteer_history, notifications, reports
+from .routes import events, profile, volunteer_matching, volunteer_history, notifications, reports, users
 
 # create main v1 router
 api_router = APIRouter(prefix="/v1")
@@ -11,3 +11,4 @@ api_router.include_router(volunteer_matching.router)
 api_router.include_router(volunteer_history.router)
 api_router.include_router(notifications.router)
 api_router.include_router(reports.router)
+api_router.include_router(users.router)

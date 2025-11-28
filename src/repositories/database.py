@@ -22,7 +22,7 @@ def get_postgres_url() -> str:
     # Build from individual components
     host = os.getenv("DATABASE_HOST", "localhost")
     port = os.getenv("DATABASE_PORT", "5432")
-    database = os.getenv("DATABASE_NAME", "COSC4353_DB")
+    database = os.getenv("DATABASE_NAME", "cosc4353_db")
     username = os.getenv("DATABASE_USER", "CHANGE_ME!!!!")
     password = os.getenv("DATABASE_PASSWORD", "CHANGE_ME!!!!")
     
