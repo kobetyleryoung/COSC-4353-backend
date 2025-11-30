@@ -11,8 +11,8 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 #region helpers
 
-def _get_reports_service() -> ReportsService:
-    return ReportsService(get_uow_manager(), logger)
+def _get_reports_service(uow_manager: UnitOfWorkManager = Depends(get_uow_manager)) -> ReportsService:
+    return ReportsService(uow_manager, logger)
 
 #endregion
 

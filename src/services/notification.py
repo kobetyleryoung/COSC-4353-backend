@@ -67,7 +67,7 @@ class NotificationService:
             else:
                 raise ValueError("No enabled notification channels for user")
         
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             # Create notification
             notification_id = NotificationId.new()
             notification = Notification(
@@ -274,19 +274,19 @@ class NotificationService:
         status_filter: Optional[NotificationStatus] = None
     ) -> List[Notification]:
         """Get notifications for a specific user."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             return uow.notifications.get_by_user_id(user_id, limit=limit, status_filter=status_filter)
     
     def mark_notification_as_read(self, notification_id: NotificationId) -> bool:
         """Mark a notification as read (for in-app notifications)."""
-        with self._uow_manager as uow:
-            notification = uow.notifications.get_by_id(notification_id)
+        with self._uow_manager.get_uow() as uow:
+            notification = uow.notifications.get(notification_id)
             if not notification:
                 return False
             
             # Update notification status
             notification.status = NotificationStatus.READ
-            uow.notifications.update(notification)
+            uow.notifications.save(notification)
             uow.commit()
             
             self._logger.info(f"Marked notification {notification_id.value} as read")
@@ -294,7 +294,7 @@ class NotificationService:
     
     def get_unread_count(self, user_id: UserId) -> int:
         """Get count of unread in-app notifications for a user."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             notifications = uow.notifications.get_by_user_id(user_id, status_filter=NotificationStatus.SENT)
             in_app_notifications = [
                 n for n in notifications
@@ -332,13 +332,13 @@ class NotificationService:
     
     def get_pending_notifications(self) -> List[Notification]:
         """Get all notifications that are queued but not yet sent."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             all_notifications = uow.notifications.list_all()
             return [n for n in all_notifications if n.status == NotificationStatus.QUEUED]
     
     def retry_failed_notifications(self) -> int:
         """Retry sending failed notifications."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             all_notifications = uow.notifications.list_all()
             failed_notifications = [
                 n for n in all_notifications
@@ -349,7 +349,7 @@ class NotificationService:
             for notification in failed_notifications:
                 notification.status = NotificationStatus.QUEUED
                 notification.error = None
-                uow.notifications.update(notification)
+                uow.notifications.save(notification)
                 self._process_notification_in_uow(uow, notification)
                 retry_count += 1
             
@@ -400,7 +400,7 @@ class NotificationService:
                 notification.status = NotificationStatus.SENT
                 notification.sent_at = datetime.now()
             
-            uow.notifications.update(notification)
+            uow.notifications.save(notification)
             uow.commit()
             
             self._logger.info(f"Processed notification {notification.id.value} via {notification.channel.name}")
@@ -408,7 +408,7 @@ class NotificationService:
         except Exception as e:
             notification.status = NotificationStatus.FAILED
             notification.error = str(e)
-            uow.notifications.update(notification)
+            uow.notifications.save(notification)
             uow.commit()
             self._logger.error(f"Failed to process notification {notification.id.value}: {e}")
 

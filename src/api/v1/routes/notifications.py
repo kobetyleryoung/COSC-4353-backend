@@ -22,8 +22,8 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 #region helpers
 
-def _get_notification_service() -> NotificationService:
-    return NotificationService(get_uow_manager(), logger)
+def _get_notification_service(uow_manager: UnitOfWorkManager = Depends(get_uow_manager)) -> NotificationService:
+    return NotificationService(uow_manager, logger)
 
 # helper to convert from dataclass model -> pydantic schema
 def _convert_notification_to_response(notification) -> NotificationResponseSchema:

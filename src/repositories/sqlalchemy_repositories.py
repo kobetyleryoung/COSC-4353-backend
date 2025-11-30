@@ -699,6 +699,39 @@ class SqlAlchemyNotificationRepository:
         )
         return [self._model_to_domain(model) for model in notif_models]
     
+    def get_by_user_id(
+        self, 
+        user_id: UserId, 
+        *, 
+        limit: Optional[int] = None,
+        status_filter: Optional['NotificationStatus'] = None
+    ) -> list[Notification]:
+        """Get all notifications for a specific user."""
+        from src.domain.notifications import NotificationStatus
+        
+        query = self.session.query(NotificationModel).filter_by(recipient_id=user_id.value)
+        
+        if status_filter:
+            query = query.filter_by(status=_map_notification_status_to_enum(status_filter))
+        
+        query = query.order_by(NotificationModel.queued_at.desc())
+        
+        if limit:
+            query = query.limit(limit)
+        
+        notif_models = query.all()
+        return [self._model_to_domain(model) for model in notif_models]
+    
+    def list_all(self, *, limit: int = 1000) -> list[Notification]:
+        """List all notifications."""
+        notif_models = (
+            self.session.query(NotificationModel)
+            .order_by(NotificationModel.queued_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in notif_models]
+    
     def _domain_to_model(self, notif: Notification) -> NotificationModel:
         """Convert domain Notification to NotificationModel."""
         return NotificationModel(

@@ -169,14 +169,17 @@ async def create_opportunity(
 
 @router.post("/match-requests", response_model=MatchRequestResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_match_request(
+    user_id: str,
     request_data: MatchRequestCreateSchema,
     matching_service: VolunteerMatchingService = Depends(_get_matching_service),
     uow=Depends(get_uow)
 ):
-    """Create a match request for a user to apply for an opportunity. Frontend sends userId in request body."""
+    """Create a match request for a user to apply for an opportunity. User ID provided as query parameter."""
     try:
-        # Get or create user based on userId from frontend
-        user = await get_or_create_user(request_data.user_id, uow)
+        logger.info(f"create_match_request called with user_id parameter: {user_id}")
+        logger.info(f"request_data: {request_data}")
+        # Get or create user
+        user = await get_or_create_user(user_id, uow)
         
         # Create match request using the user's ID
         match_request = matching_service.create_match_request(

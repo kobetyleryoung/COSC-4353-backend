@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from src.services.volunteer_history import VolunteerHistoryService
 from src.domain.users import UserId
@@ -20,8 +21,8 @@ router = APIRouter(prefix="/volunteer-history", tags=["volunteer-history"])
 
 #region helpers
 
-def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(get_uow_manager(), logger)
+def _get_history_service(uow_manager: UnitOfWorkManager = Depends(get_uow_manager)) -> VolunteerHistoryService:
+    return VolunteerHistoryService(uow_manager, logger)
 
 
 def _convert_history_entry_to_response(entry) -> HistoryEntryResponseSchema:
@@ -245,7 +246,6 @@ async def get_user_hours_in_period(
 ):
     """Get volunteer hours for a user within a specific time period."""
     try:
-        from datetime import datetime
         start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
         end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         

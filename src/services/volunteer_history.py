@@ -44,7 +44,7 @@ class VolunteerHistoryService:
         if notes and len(notes) > 1000:
             raise ValueError("Notes must be 1000 characters or less")
         
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             # Check for duplicate entry (same user, event, and date)
             existing_entry = self._find_existing_entry_in_uow(uow, user_id, event_id, date)
             if existing_entry:
@@ -70,17 +70,17 @@ class VolunteerHistoryService:
     
     def get_history_entry_by_id(self, entry_id: VolunteerHistoryEntryId) -> Optional[VolunteerHistoryEntry]:
         """Retrieve a history entry by its ID."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             return uow.volunteer_history.get_by_id(entry_id)
     
     def get_user_history(self, user_id: UserId) -> List[VolunteerHistoryEntry]:
         """Get all volunteer history entries for a specific user."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             return uow.volunteer_history.get_by_user_id(user_id)
     
     def get_event_history(self, event_id: EventId) -> List[VolunteerHistoryEntry]:
         """Get all volunteer history entries for a specific event."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             return uow.volunteer_history.get_by_event_id(event_id)
     
     def get_user_total_hours(self, user_id: UserId) -> float:
@@ -121,12 +121,12 @@ class VolunteerHistoryService:
     def get_recent_history(self, days: int = 30) -> List[VolunteerHistoryEntry]:
         """Get volunteer history entries from the last N days."""
         cutoff_date = datetime.now() - timedelta(days=days)
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             return uow.volunteer_history.get_recent(days=days)
     
     def get_top_volunteers_by_hours(self, limit: int = 10) -> List[tuple[UserId, float]]:
         """Get top volunteers by total hours volunteered."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             all_entries = uow.volunteer_history.list_all()
             
         user_hours = {}
@@ -142,7 +142,7 @@ class VolunteerHistoryService:
     
     def get_top_volunteers_by_events(self, limit: int = 10) -> List[tuple[UserId, int]]:
         """Get top volunteers by number of events participated in."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             all_entries = uow.volunteer_history.list_all()
             
         user_events = {}
@@ -166,7 +166,7 @@ class VolunteerHistoryService:
         notes: Optional[str] = None
     ) -> Optional[VolunteerHistoryEntry]:
         """Update an existing history entry."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             entry = uow.volunteer_history.get_by_id(entry_id)
             if not entry:
                 return None
@@ -203,7 +203,7 @@ class VolunteerHistoryService:
     
     def delete_history_entry(self, entry_id: VolunteerHistoryEntryId) -> bool:
         """Delete a volunteer history entry."""
-        with self._uow_manager as uow:
+        with self._uow_manager.get_uow() as uow:
             entry = uow.volunteer_history.get_by_id(entry_id)
             if not entry:
                 return False
