@@ -27,8 +27,9 @@ class OpportunityResponseSchema(BaseModel):
 
 
 class MatchRequestCreateSchema(BaseModel):
-    opportunity_id: UUID = Field(..., description="Opportunity ID")
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (auth0 sub)")
+    opportunity_id: str = Field(..., description="Opportunity ID (UUID string)")
+
 
 class MatchRequestResponseSchema(BaseModel):
     id: UUID

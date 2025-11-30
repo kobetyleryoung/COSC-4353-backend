@@ -1,18 +1,19 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
+from src.repositories.models import UserModel
 from src.services.profile_management import ProfileManagementService
 from src.services.volunteer_history import VolunteerHistoryService
 from src.domain.users import UserId, User, UserRole
 from src.domain.profiles import AvailabilityWindow
+from src.repositories.database import get_uow, get_uow_manager
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.profile import (
     ProfileCreateSchema, ProfileUpdateSchema, ProfileResponseSchema,
     AddSkillSchema, AddTagSchema, AvailabilityWindowSchema, ProfileStatsSchema
 )
 from src.config.logging_config import logger
-from src.config.database_settings import get_uow
 
 # profiles sub url definition
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -22,10 +23,8 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 def _get_profile_service(uow=Depends(get_uow)) -> ProfileManagementService:
     return ProfileManagementService(logger, uow.profiles)
 
-#TODO: see above todo
-@lru_cache(maxsize=1) 
 def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(logger)
+    return VolunteerHistoryService(get_uow_manager(), logger)
 
 
 def _convert_availability_schema_to_domain(availability_schema: AvailabilityWindowSchema) -> AvailabilityWindow:
@@ -46,7 +45,7 @@ def _convert_availability_domain_to_schema(availability: AvailabilityWindow) -> 
     )
 
 
-def _convert_profile_to_response(profile) -> ProfileResponseSchema:
+def _convert_profile_to_response(profile, email: str = None) -> ProfileResponseSchema:
     """Convert domain Profile to ProfileResponseSchema."""
     availability_schemas = [
         _convert_availability_domain_to_schema(window)
@@ -55,6 +54,7 @@ def _convert_profile_to_response(profile) -> ProfileResponseSchema:
     
     return ProfileResponseSchema(
         user_id=profile.user_id.value,
+        email=email or "unknown@example.com",
         display_name=profile.display_name,
         phone=profile.phone,
         skills=profile.skills,
@@ -98,23 +98,10 @@ async def get_profile_by_user_id(
             )
         
         # Get user to fetch email
-        user_model = uow.session.query(uow.users.session.query(uow.users._model_to_domain.__self__.__class__).filter_by(id=user_id).first())
-        # Simpler approach - query directly
-        from src.repositories.models import UserModel
         user_record = uow.session.query(UserModel).filter_by(id=user_id).first()
         email = user_record.email if user_record else "unknown@example.com"
         
-        response = _convert_profile_to_response(profile)
-        return ProfileResponseSchema(
-            user_id=response.user_id,
-            email=email,
-            display_name=response.display_name,
-            phone=response.phone,
-            skills=response.skills,
-            tags=response.tags,
-            availability=response.availability,
-            updated_at=response.updated_at
-        )
+        return _convert_profile_to_response(profile, email=email)
     except HTTPException:
         raise
     except Exception as e:
@@ -128,32 +115,23 @@ async def get_profile_by_user_id(
 @router.post("/", response_model=ProfileResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_profile(
     profile_data: ProfileCreateSchema,
+    profile_service: ProfileManagementService = Depends(_get_profile_service),
     uow=Depends(get_uow)
 ):
-    """Create a new user profile. Also creates the user if needed."""
+    """Create a new user profile. Frontend sends userId in request body."""
     try:
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(profile_data.user_id, uow)
+        
         # Convert availability windows
         availability_windows = [
             _convert_availability_schema_to_domain(window)
             for window in profile_data.availability
         ]
         
-        # Generate new user_id
-        user_id = UserId.new()
-        
-        # Create user first to satisfy foreign key constraint
-        user = User(
-            id=user_id,
-            email=profile_data.email,
-            roles={UserRole.VOLUNTEER},
-            auth0_sub=None
-        )
-        uow.users.add(user)
-        
-        # Now create profile
-        profile_service = ProfileManagementService(logger, uow.profiles)
+        # Create profile using the user's ID
         profile = profile_service.create_profile(
-            user_id=user_id,
+            user_id=user.id,
             display_name=profile_data.display_name,
             phone=profile_data.phone,
             skills=profile_data.skills,
@@ -161,23 +139,8 @@ async def create_profile(
             availability=availability_windows
         )
         
-        # Convert availability for response
-        availability_schemas = [
-            _convert_availability_domain_to_schema(window)
-            for window in profile.availability
-        ]
-        
         # Return response with email from user
-        return {
-            "user_id": profile.user_id.value,
-            "email": profile_data.email,
-            "display_name": profile.display_name,
-            "phone": profile.phone,
-            "skills": profile.skills,
-            "tags": profile.tags,
-            "availability": availability_schemas,
-            "updated_at": profile.updated_at
-        }
+        return _convert_profile_to_response(profile, email=user.email)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -195,7 +158,8 @@ async def create_profile(
 async def update_profile(
     user_id: UUID,
     profile_data: ProfileUpdateSchema,
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
+    profile_service: ProfileManagementService = Depends(_get_profile_service),
+    uow=Depends(get_uow)
 ):
     """Update an existing user profile."""
     try:
@@ -222,7 +186,11 @@ async def update_profile(
                 detail="Profile not found"
             )
         
-        return _convert_profile_to_response(profile)
+        # Get user email
+        user_record = uow.session.query(UserModel).filter_by(id=user_id).first()
+        email = user_record.email if user_record else "unknown@example.com"
+        
+        return _convert_profile_to_response(profile, email=email)
     except HTTPException:
         raise
     except ValueError as ve:

@@ -1,17 +1,20 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from src.services.event_management import EventManagementService
 from src.domain.events import Event, EventId, Location
 from src.domain.users import UserId
+from src.repositories.database import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
+from src.api.dependencies import get_or_create_user
 from ..schemas.events import (
     EventCreateSchema, EventUpdateSchema, EventResponseSchema,
-    EventListResponseSchema, EventSearchSchema, LocationSchema
+    EventListResponseSchema, LocationSchema, EventSearchSchema
 )
 from src.repositories.unit_of_work import UnitOfWorkManager
 from src.config.logging_config import logger
-from src.config.database_settings import get_uow
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -40,8 +43,8 @@ def _convert_event_to_response(event: Event) -> EventResponseSchema:
         description=event.description,
         location=_convert_location_to_schema(event.location),
         required_skills=event.required_skills,
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
+        starts_at=event.starts_at.isoformat(),
+        ends_at=event.ends_at.isoformat() if event.ends_at else None,
         capacity=event.capacity,
         status=event.status.name
     )
@@ -141,15 +144,17 @@ async def get_event_by_id(
 @router.post("/", response_model=EventResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreateSchema,
+    event_service: EventManagementService = Depends(_get_event_service),
     uow=Depends(get_uow)
 ):
-    """Create a new event and automatically create a default volunteer opportunity for it."""
+    """Create a new event. Frontend sends userId in request body."""
     try:
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(event_data.user_id, uow)
+        
         # Convert schema to domain objects
         location = _convert_location_schema_to_domain(event_data.location)
-        admin_id = UserId.new()  # In real app, get from authenticated user
         
-        event_service = EventManagementService(uow.session, logger)
         event = event_service.create_event(
             title=event_data.title,
             description=event_data.description,
@@ -199,14 +204,23 @@ async def update_event(
         if event_data.location:
             location = _convert_location_schema_to_domain(event_data.location)
         
+        # Parse datetime strings if provided
+        starts_at = None
+        if event_data.starts_at:
+            starts_at = datetime.fromisoformat(event_data.starts_at.replace('Z', '+00:00'))
+        
+        ends_at = None
+        if event_data.ends_at:
+            ends_at = datetime.fromisoformat(event_data.ends_at.replace('Z', '+00:00'))
+        
         event = event_service.update_event(
             event_id=EventId(event_id),
             title=event_data.title,
             description=event_data.description,
             location=location,
             required_skills=event_data.required_skills,
-            starts_at=event_data.starts_at,
-            ends_at=event_data.ends_at,
+            starts_at=starts_at,
+            ends_at=ends_at,
             capacity=event_data.capacity
         )
         

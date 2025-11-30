@@ -132,6 +132,13 @@ class SqlAlchemyUserRepository:
     def __init__(self, session: Session):
         self.session = session
     
+    def get(self, user_id: UserId) -> Optional[User]:
+        """Get user by ID."""
+        user_model = self.session.query(UserModel).filter_by(id=user_id.value).first()
+        if not user_model:
+            return None
+        return self._model_to_domain(user_model)
+    
     def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email address."""
         user_model = self.session.query(UserModel).filter_by(email=email).first()

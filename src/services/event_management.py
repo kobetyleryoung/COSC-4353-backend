@@ -57,6 +57,7 @@ class EventManagementService:
 
         # Create event domain object
         event_id = EventId.new()
+            
         event = Event(
             id=event_id,
             title=title.strip(),

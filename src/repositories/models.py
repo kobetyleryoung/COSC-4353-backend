@@ -16,10 +16,9 @@ from sqlalchemy import (
     ForeignKey, Table, Index, JSON
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, ENUM
-from src.config.database import Base
+from .base import Base, schema_Name
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
-from src.config.database import schema_Name
 
 # Enum definitions for database
 class UserRoleEnum(Enum):

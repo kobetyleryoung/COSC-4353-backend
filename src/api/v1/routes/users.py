@@ -6,7 +6,7 @@ from src.services.user_management import UserManagementService
 from src.domain.users import UserId
 from ..schemas.users import UserCreateSchema, UserResponseSchema, UserUpdateSchema
 from src.config.logging_config import logger
-from src.config.database_settings import get_uow
+from src.repositories.database import get_uow
 
 router = APIRouter(prefix="/users", tags=["users"])
 

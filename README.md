@@ -112,7 +112,7 @@ The database tables are automatically created when you run `make db-init`. No se
 The application uses the Unit of Work pattern for database transactions:
 
 ```python
-from src.config.database_settings import get_uow
+from src.repositories.database import get_uow
 
 # In FastAPI routes
 @app.post("/users/")

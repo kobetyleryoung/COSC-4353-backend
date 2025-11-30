@@ -1,3 +1,9 @@
+"""
+SQLAlchemy Base configuration.
+
+This module provides the declarative base class that all models inherit from.
+Separated to avoid circular imports between database.py and models.py.
+"""
 from sqlalchemy import MetaData
 from sqlalchemy.orm import declarative_base
 

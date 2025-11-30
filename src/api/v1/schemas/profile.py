@@ -17,7 +17,7 @@ class AvailabilityWindowSchema(BaseModel):
 
 
 class ProfileCreateSchema(BaseModel):
-    email: str = Field(..., description="User email address")
+    user_id: str = Field(..., description="User ID from Auth0")
     display_name: str = Field(..., min_length=1, max_length=100, description="Display name")
     phone: Optional[str] = Field(None, max_length=20, description="Phone number")
     skills: List[str] = Field(default_factory=list, description="User skills")

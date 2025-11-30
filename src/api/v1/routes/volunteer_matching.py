@@ -1,13 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.volunteer_matching import VolunteerMatchingService
 from src.services.profile_management import ProfileManagementService
-from src.domain.users import UserId
+from src.domain.users import UserId, User
 from src.domain.volunteering import OpportunityId, MatchRequestId, MatchId
 from src.domain.events import EventId
+from src.repositories.database import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
+from src.api.dependencies import get_or_create_user
 from ..schemas.volunteer_matching import (
     OpportunityCreateSchema, OpportunityResponseSchema,
     MatchRequestCreateSchema, MatchRequestResponseSchema,
@@ -16,7 +18,6 @@ from ..schemas.volunteer_matching import (
     MatchingVolunteersResponseSchema, MatchingOpportunitiesResponseSchema
 )
 from src.config.logging_config import logger
-from src.config.database_settings import get_uow
 
 router = APIRouter(prefix="/volunteer-matching", tags=["volunteer-matching"])
 
@@ -169,15 +170,17 @@ async def create_opportunity(
 @router.post("/match-requests", response_model=MatchRequestResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_match_request(
     request_data: MatchRequestCreateSchema,
-    matching_service: VolunteerMatchingService = Depends(_get_matching_service)
+    matching_service: VolunteerMatchingService = Depends(_get_matching_service),
+    uow=Depends(get_uow)
 ):
-    """Create a match request for a volunteer to apply for an opportunity."""
+    """Create a match request for a user to apply for an opportunity. Frontend sends userId in request body."""
     try:
-        # In real app, get user_id from authenticated user
-        user_id = UserId.new()
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(request_data.user_id, uow)
         
+        # Create match request using the user's ID
         match_request = matching_service.create_match_request(
-            user_id=UserId(request_data.user_id),
+            user_id=user.id,
             opportunity_id=OpportunityId(request_data.opportunity_id)
         )
         

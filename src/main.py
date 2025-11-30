@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config.logging_config import logger
 from src.api.v1.router import api_router
-from src.config.database_settings import database_lifespan, get_database_manager
+from src.repositories.database import database_lifespan, get_database_manager
 from src.repositories.database import check_database_connection
 
 logger.info("Starting COSC-4353 Volunteer Management API...")

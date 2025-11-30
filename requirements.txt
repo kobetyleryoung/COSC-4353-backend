@@ -19,6 +19,8 @@ starlette==0.46.2
 sqlalchemy==2.0.44
 typing_extensions==4.12.2
 uvicorn==0.24.0.post1
+dnspython==2.8.0
+email-validator==2.3.0
 
 # Testing dependencies
 pytest==7.4.3

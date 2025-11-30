@@ -13,6 +13,7 @@ class LocationSchema(BaseModel):
 
 
 class EventCreateSchema(BaseModel):
+    user_id: str = Field(..., description="User ID (auth0 sub) of the organizer")
     title: str = Field(..., min_length=1, max_length=100, description="Event title")
     description: str = Field(..., min_length=1, max_length=500, description="Event description")
     location: LocationSchema = Field(..., description="Event location")
@@ -62,8 +63,8 @@ class EventResponseSchema(BaseModel):
     description: Optional[str]
     location: Optional[LocationSchema]
     required_skills: List[str]
-    starts_at: datetime
-    ends_at: Optional[datetime]
+    starts_at: str
+    ends_at: Optional[str]
     capacity: Optional[int]
     status: str
     
@@ -80,4 +81,3 @@ class EventSearchSchema(BaseModel):
     skills: Optional[List[str]] = Field(None, description="Skills to search for")
     city: Optional[str] = Field(None, description="City to search in")
     state: Optional[str] = Field(None, description="State to search in")
-    status: Optional[str] = Field(None, description="Event status filter")
