@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
+from src.domain.notifications import NotificationStatus
 from ..domain.repositories import (
     EventRepository, ProfileRepository, OpportunityRepository,
     MatchRepository, MatchRequestRepository, NotificationRepository,
@@ -707,7 +708,6 @@ class SqlAlchemyNotificationRepository:
         status_filter: Optional['NotificationStatus'] = None
     ) -> list[Notification]:
         """Get all notifications for a specific user."""
-        from src.domain.notifications import NotificationStatus
         
         query = self.session.query(NotificationModel).filter_by(recipient_id=user_id.value)
         
@@ -809,6 +809,51 @@ class SqlAlchemyVolunteerHistoryRepository:
         entry_models = (
             self.session.query(VolunteerHistoryEntryModel)
             .filter_by(event_id=event_id.value)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in entry_models]
+    
+    def get_by_user_id(self, user_id: UserId, *, limit: Optional[int] = None) -> list[VolunteerHistoryEntry]:
+        """Get volunteer history entries for a user (alias for list_for_user)."""
+        return self.list_for_user(user_id, limit=limit or 100)
+    
+    def get_by_event_id(self, event_id: EventId) -> list[VolunteerHistoryEntry]:
+        """Get volunteer history entries for an event (alias for list_for_event)."""
+        return self.list_for_event(event_id)
+    
+    def get_by_id(self, entry_id: VolunteerHistoryEntryId) -> Optional[VolunteerHistoryEntry]:
+        """Get volunteer history entry by ID (alias for get)."""
+        return self.get(entry_id)
+    
+    def update(self, entry: VolunteerHistoryEntry) -> None:
+        """Update an existing volunteer history entry (alias for save)."""
+        self.save(entry)
+    
+    def delete(self, entry_id: VolunteerHistoryEntryId) -> None:
+        """Delete a volunteer history entry."""
+        entry_model = self.session.query(VolunteerHistoryEntryModel).filter_by(id=entry_id.value).first()
+        if entry_model:
+            self.session.delete(entry_model)
+    
+    def list_all(self, *, limit: int = 1000) -> list[VolunteerHistoryEntry]:
+        """List all volunteer history entries."""
+        entry_models = (
+            self.session.query(VolunteerHistoryEntryModel)
+            .order_by(VolunteerHistoryEntryModel.date.desc())
+            .limit(limit)
+            .all()
+        )
+        return [self._model_to_domain(model) for model in entry_models]
+    
+    def get_recent(self, *, days: int = 30) -> list[VolunteerHistoryEntry]:
+        """Get recent volunteer history entries from the last N days."""
+        from datetime import datetime, timedelta
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        entry_models = (
+            self.session.query(VolunteerHistoryEntryModel)
+            .filter(VolunteerHistoryEntryModel.date >= cutoff_date)
+            .order_by(VolunteerHistoryEntryModel.date.desc())
             .all()
         )
         return [self._model_to_domain(model) for model in entry_models]
