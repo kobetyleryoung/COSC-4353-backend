@@ -1,31 +1,28 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
+from datetime import datetime
 
 from src.services.event_management import EventManagementService
 from src.domain.events import Event, EventId, Location
 from src.domain.users import UserId
+from src.repositories.database import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
+from src.api.dependencies import get_or_create_user
 from ..schemas.events import (
     EventCreateSchema, EventUpdateSchema, EventResponseSchema,
-    EventListResponseSchema, EventSearchSchema, LocationSchema
+    EventListResponseSchema, LocationSchema, EventSearchSchema
 )
-
+from src.repositories.unit_of_work import UnitOfWorkManager
 from src.config.logging_config import logger
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_event_service() -> EventManagementService:
-    return EventManagementService(logger)
-
+def _get_event_service(uow=Depends(get_uow)) -> EventManagementService:
+        return EventManagementService(uow.session, logger)
+    
 def _convert_location_to_schema(location) -> Optional[LocationSchema]:
     """Convert Location domain model to LocationSchema"""
     if location is None:
@@ -46,8 +43,8 @@ def _convert_event_to_response(event: Event) -> EventResponseSchema:
         description=event.description,
         location=_convert_location_to_schema(event.location),
         required_skills=event.required_skills,
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
+        starts_at=event.starts_at.isoformat(),
+        ends_at=event.ends_at.isoformat() if event.ends_at else None,
         capacity=event.capacity,
         status=event.status.name
     )
@@ -147,13 +144,16 @@ async def get_event_by_id(
 @router.post("/", response_model=EventResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreateSchema,
-    event_service: EventManagementService = Depends(_get_event_service)
+    event_service: EventManagementService = Depends(_get_event_service),
+    uow=Depends(get_uow)
 ):
-    """Create a new event."""
+    """Create a new event. Frontend sends userId in request body."""
     try:
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(event_data.user_id, uow)
+        
         # Convert schema to domain objects
         location = _convert_location_schema_to_domain(event_data.location)
-        admin_id = UserId.new()  # In real app, get from authenticated user
         
         event = event_service.create_event(
             title=event_data.title,
@@ -163,6 +163,18 @@ async def create_event(
             starts_at=event_data.starts_at,
             ends_at=event_data.ends_at,
             capacity=event_data.capacity
+        )
+        
+        # Automatically create a default volunteer opportunity for this event
+        from src.services.volunteer_matching import VolunteerMatchingService
+        matching_service = VolunteerMatchingService(logger, uow.opportunities, uow.matches, uow.match_requests)
+        matching_service.create_opportunity(
+            event_id=event.id,
+            title=f"Volunteer for {event_data.title}",
+            description=event_data.description,
+            required_skills=event_data.required_skills,
+            min_hours=None,
+            max_slots=event_data.capacity
         )
         
         return _convert_event_to_response(event)
@@ -192,14 +204,23 @@ async def update_event(
         if event_data.location:
             location = _convert_location_schema_to_domain(event_data.location)
         
+        # Parse datetime strings if provided
+        starts_at = None
+        if event_data.starts_at:
+            starts_at = datetime.fromisoformat(event_data.starts_at.replace('Z', '+00:00'))
+        
+        ends_at = None
+        if event_data.ends_at:
+            ends_at = datetime.fromisoformat(event_data.ends_at.replace('Z', '+00:00'))
+        
         event = event_service.update_event(
             event_id=EventId(event_id),
             title=event_data.title,
             description=event_data.description,
             location=location,
             required_skills=event_data.required_skills,
-            starts_at=event_data.starts_at,
-            ends_at=event_data.ends_at,
+            starts_at=starts_at,
+            ends_at=ends_at,
             capacity=event_data.capacity
         )
         

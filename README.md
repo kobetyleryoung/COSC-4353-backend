@@ -18,10 +18,140 @@ The Volunteer Management System provides a robust platform for organizations to 
 ## Tech Stack
 
 - **Framework**: FastAPI 0.115.11
+- **Database**: SQLAlchemy ORM with SQLite/PostgreSQL support
 - **Authentication**: Auth0 JWT tokens
 - **Validation**: Pydantic models with comprehensive validation
 - **Testing**: Pytest with coverage reporting
 - **Documentation**: Auto-generated OpenAPI/Swagger docs
+
+## Database Layer
+
+The application uses SQLAlchemy ORM with the Repository pattern and Unit of Work for clean separation between business logic and data access.
+
+### Architecture
+
+```
+Domain Layer (Pure Business Logic)
+├── domain/
+│   ├── users.py           # User entities and value objects
+│   ├── profiles.py        # Profile entities  
+│   ├── events.py          # Event entities
+│   ├── volunteering.py    # Volunteering entities (opportunities, matches, etc.)
+│   ├── notifications.py   # Notification entities
+│   └── repositories.py   # Repository interfaces (protocols)
+
+Repository Layer (Data Access)
+├── repositories/
+│   ├── models.py              # SQLAlchemy database models
+│   ├── sqlalchemy_repositories.py  # Repository implementations
+│   ├── unit_of_work.py       # Transaction management
+│   ├── database.py           # Database configuration and setup
+│   └── migrations.py         # Database migration utilities
+├── config/
+│   └── database_settings.py  # FastAPI integration and initialization
+```
+
+### Database Models
+
+The following entities are mapped to database tables:
+
+- **Users** - User accounts with Auth0 integration (`auth0_sub` field)
+- **Profiles** - User profiles with skills, availability, etc.
+- **Events** - Volunteer events with location and capacity
+- **Opportunities** - Specific volunteer roles within events
+- **Matches** - Confirmed volunteer assignments
+- **Match Requests** - Pending volunteer applications
+- **Notifications** - System notifications with delivery status
+- **Volunteer History** - Historical volunteer activity records
+
+### Database Configuration
+
+Configure the PostgreSQL database using environment variables:
+
+```bash
+# Database URL (recommended)
+DATABASE_URL=postgresql://user:password@localhost/volunteer_management
+
+# Or individual components (for development)
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=volunteer_management
+DATABASE_USER=postgres
+DATABASE_PASSWORD=password
+```
+
+For development, you can use default values if no environment variables are set:
+- Host: localhost
+- Port: 5432
+- Database: volunteer_management
+- User: postgres
+- Password: postgres
+
+### Database Commands
+
+Use the Makefile for database operations (migrations are bootstrapped automatically):
+
+```bash
+# Initialize PostgreSQL database and create tables
+make db-init
+
+# Check database connection
+make db-check
+
+# Drop all tables (WARNING: destructive!)
+make db-drop
+
+# Reset database (drop + recreate all tables)
+make db-reset
+```
+
+The database tables are automatically created when you run `make db-init`. No separate migration files are needed - the schema is defined in the SQLAlchemy models and created directly.
+
+### Using Repositories in Code
+
+The application uses the Unit of Work pattern for database transactions:
+
+```python
+from src.repositories.database import get_uow
+
+# In FastAPI routes
+@app.post("/users/")
+def create_user(user_data: dict, uow = Depends(get_uow)):
+    with uow_manager.get_uow() as uow:
+        user = User(...)
+        uow.users.add(user)
+        uow.commit()
+
+# In services
+def create_user_profile(user_id: str, profile_data: dict):
+    with uow_manager.get_uow() as uow:
+        # Find user
+        user = uow.users.get_by_auth0_sub(user_id)
+        if not user:
+            raise UserNotFoundError()
+        
+        # Create profile
+        profile = Profile(user_id=user.id, ...)
+        uow.profiles.save(profile)
+        
+        # Commit transaction
+        uow.commit()
+```
+
+### Auth0 Integration
+
+Since authentication is handled by Auth0:
+
+- Users are linked via `auth0_sub` field (Auth0 subject identifier)
+- No passwords or local authentication tokens are stored
+- User lookup supports both email and Auth0 sub: `get_by_email()`, `get_by_auth0_sub()`
+
+### Health Checks
+
+Database health is monitored through API endpoints:
+
+- `GET /health` - General application health
+- `GET /health/database` - Database connection status and configuration
 
 ## Quick Start
 
@@ -268,10 +398,27 @@ The project uses comprehensive testing with pytest and includes:
 Common development commands are available through the Makefile:
 
 ```bash
-make test          # Run tests
-make coverage      # Run tests with coverage
-make lint          # Run linting
-make format        # Format code
+# Development
+make install       # Install dependencies
+make dev          # Run development server with auto-reload
+make run          # Run production server
+
+# Testing
+make test         # Run all tests with coverage
+make test-unit    # Run unit tests only
+make test-coverage # Run tests with detailed coverage
+make test-html    # Generate HTML coverage report
+
+# Code Quality
+make lint         # Check code style
+make format       # Format code
+make clean        # Clean cache files
+
+# Database
+make db-init      # Initialize database tables
+make db-check     # Check database connection
+make db-drop      # Drop all tables (WARNING: destructive!)
+make db-reset     # Drop and recreate all tables (WARNING: destructive!)
 ```
 
 <!-- ## License

@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
+from src.repositories.models import UserModel
 from src.services.profile_management import ProfileManagementService
 from src.services.volunteer_history import VolunteerHistoryService
-from src.domain.users import UserId
+from src.domain.users import UserId, User, UserRole
 from src.domain.profiles import AvailabilityWindow
+from src.repositories.database import get_uow, get_uow_manager
+from src.repositories.unit_of_work import UnitOfWorkManager
 from ..schemas.profile import (
     ProfileCreateSchema, ProfileUpdateSchema, ProfileResponseSchema,
     AddSkillSchema, AddTagSchema, AvailabilityWindowSchema, ProfileStatsSchema
@@ -18,19 +20,11 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1) 
-def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService(logger)
+def _get_profile_service(uow=Depends(get_uow)) -> ProfileManagementService:
+    return ProfileManagementService(logger, uow.profiles)
 
-#TODO: see above todo
-@lru_cache(maxsize=1) 
 def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(logger)
+    return VolunteerHistoryService(get_uow_manager(), logger)
 
 
 def _convert_availability_schema_to_domain(availability_schema: AvailabilityWindowSchema) -> AvailabilityWindow:
@@ -51,7 +45,7 @@ def _convert_availability_domain_to_schema(availability: AvailabilityWindow) -> 
     )
 
 
-def _convert_profile_to_response(profile) -> ProfileResponseSchema:
+def _convert_profile_to_response(profile, email: str = None) -> ProfileResponseSchema:
     """Convert domain Profile to ProfileResponseSchema."""
     availability_schemas = [
         _convert_availability_domain_to_schema(window)
@@ -60,6 +54,7 @@ def _convert_profile_to_response(profile) -> ProfileResponseSchema:
     
     return ProfileResponseSchema(
         user_id=profile.user_id.value,
+        email=email or "unknown@example.com",
         display_name=profile.display_name,
         phone=profile.phone,
         skills=profile.skills,
@@ -75,10 +70,10 @@ def _convert_profile_to_response(profile) -> ProfileResponseSchema:
 async def get_all_profiles(
     profile_service: ProfileManagementService = Depends(_get_profile_service)
 ):
-    """Get all user profiles."""
+    """Get all user profiles. Note: Limited functionality - returns empty until pagination implemented."""
     try:
-        profiles = profile_service.get_all_profiles()
-        return [_convert_profile_to_response(profile) for profile in profiles]
+        logger.warning("get_all_profiles endpoint called but repository doesn't support list_all - returning empty list")
+        return []
     except Exception as e:
         logger.error(f"Error getting all profiles: {e}")
         raise HTTPException(
@@ -90,10 +85,11 @@ async def get_all_profiles(
 @router.get("/{user_id}", response_model=ProfileResponseSchema)
 async def get_profile_by_user_id(
     user_id: UUID,
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
+    uow=Depends(get_uow)
 ):
     """Get a user's profile by user ID."""
     try:
+        profile_service = ProfileManagementService(logger, uow.profiles)
         profile = profile_service.get_profile_by_user_id(UserId(user_id))
         if not profile:
             raise HTTPException(
@@ -101,7 +97,11 @@ async def get_profile_by_user_id(
                 detail="Profile not found"
             )
         
-        return _convert_profile_to_response(profile)
+        # Get user to fetch email
+        user_record = uow.session.query(UserModel).filter_by(id=user_id).first()
+        email = user_record.email if user_record else "unknown@example.com"
+        
+        return _convert_profile_to_response(profile, email=email)
     except HTTPException:
         raise
     except Exception as e:
@@ -115,21 +115,23 @@ async def get_profile_by_user_id(
 @router.post("/", response_model=ProfileResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_profile(
     profile_data: ProfileCreateSchema,
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
+    profile_service: ProfileManagementService = Depends(_get_profile_service),
+    uow=Depends(get_uow)
 ):
-    """Create a new user profile."""
+    """Create a new user profile. Frontend sends userId in request body."""
     try:
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(profile_data.user_id, uow)
+        
         # Convert availability windows
         availability_windows = [
             _convert_availability_schema_to_domain(window)
             for window in profile_data.availability
         ]
         
-        # In real app, get user_id from authenticated user
-        user_id = UserId.new()
-        
+        # Create profile using the user's ID
         profile = profile_service.create_profile(
-            user_id=user_id,
+            user_id=user.id,
             display_name=profile_data.display_name,
             phone=profile_data.phone,
             skills=profile_data.skills,
@@ -137,7 +139,8 @@ async def create_profile(
             availability=availability_windows
         )
         
-        return _convert_profile_to_response(profile)
+        # Return response with email from user
+        return _convert_profile_to_response(profile, email=user.email)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -155,7 +158,8 @@ async def create_profile(
 async def update_profile(
     user_id: UUID,
     profile_data: ProfileUpdateSchema,
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
+    profile_service: ProfileManagementService = Depends(_get_profile_service),
+    uow=Depends(get_uow)
 ):
     """Update an existing user profile."""
     try:
@@ -182,7 +186,11 @@ async def update_profile(
                 detail="Profile not found"
             )
         
-        return _convert_profile_to_response(profile)
+        # Get user email
+        user_record = uow.session.query(UserModel).filter_by(id=user_id).first()
+        email = user_record.email if user_record else "unknown@example.com"
+        
+        return _convert_profile_to_response(profile, email=email)
     except HTTPException:
         raise
     except ValueError as ve:
@@ -356,40 +364,6 @@ async def remove_availability_window(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove availability window"
-        )
-
-
-@router.get("/search/by-skills", response_model=List[ProfileResponseSchema])
-async def search_profiles_by_skills(
-    skills: List[str],
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
-):
-    """Search profiles by skills."""
-    try:
-        profiles = profile_service.get_profiles_by_skills(skills)
-        return [_convert_profile_to_response(profile) for profile in profiles]
-    except Exception as e:
-        logger.error(f"Error searching profiles by skills: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to search profiles"
-        )
-
-
-@router.get("/search/by-tags", response_model=List[ProfileResponseSchema])
-async def search_profiles_by_tags(
-    tags: List[str],
-    profile_service: ProfileManagementService = Depends(_get_profile_service)
-):
-    """Search profiles by tags."""
-    try:
-        profiles = profile_service.get_profiles_by_tags(tags)
-        return [_convert_profile_to_response(profile) for profile in profiles]
-    except Exception as e:
-        logger.error(f"Error searching profiles by tags: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to search profiles"
         )
 
 

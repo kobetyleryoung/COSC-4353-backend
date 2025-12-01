@@ -1,7 +1,7 @@
 # COSC-4353 Backend Makefile
 # Simple commands to run the volunteer management API
 
-.PHONY: help install dev test test-unit test-integration test-coverage clean lint format run
+.PHONY: help install dev test test-unit test-integration test-coverage clean lint format run db-init db-drop db-reset db-check db-up db-down db-logs
 
 # Default target
 help:
@@ -16,6 +16,15 @@ help:
 	@echo "  make lint         - Check code style"
 	@echo "  make format       - Format code"
 	@echo "  make clean        - Clean cache files"
+	@echo ""
+	@echo "Database commands:"
+	@echo "  make db-up        - Start PostgreSQL database in Docker"
+	@echo "  make db-down      - Stop PostgreSQL database"
+	@echo "  make db-logs      - View database logs"
+	@echo "  make db-init      - Initialize database tables"
+	@echo "  make db-drop      - Drop all database tables (WARNING: destructive!)"
+	@echo "  make db-reset     - Drop and recreate all tables (WARNING: destructive!)"
+	@echo "  make db-check     - Check database connection"
 
 # Install dependencies
 install:
@@ -64,3 +73,32 @@ clean:
 	rm -f coverage.xml
 	rm -rf .coverage
 	rm -rf .pytest_cache/
+
+# Database commands
+db-up:
+	docker compose -f docker/docker-compose.yml up -d
+	@echo "Waiting for database to be ready..."
+	@sleep 3
+	@echo "PostgreSQL is running on port 5432"
+
+db-down:
+	docker compose -f docker/docker-compose.yml down
+
+db-logs:
+	docker compose -f docker/docker-compose.yml logs -f postgres
+
+db-init:
+	./venv/bin/python -c "from src.repositories.database import DatabaseManager; mgr = DatabaseManager(); mgr.initialize()"
+
+db-drop:
+	@echo "WARNING: This will delete all data in the database!"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	./venv/bin/python -c "from src.repositories.database import DatabaseManager, drop_tables; mgr = DatabaseManager(); mgr.initialize(create_tables_if_not_exist=False); drop_tables(mgr.get_engine())"
+
+db-reset:
+	@echo "WARNING: This will delete all data and recreate the database!"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	./venv/bin/python -c "from src.repositories.database import DatabaseManager, drop_tables, create_tables; mgr = DatabaseManager(); mgr.initialize(create_tables_if_not_exist=False); drop_tables(mgr.get_engine()); create_tables(mgr.get_engine())"
+
+db-check:
+	./venv/bin/python -c "from src.repositories.database import DatabaseManager, check_database_connection; mgr = DatabaseManager(); mgr.initialize(create_tables_if_not_exist=False); print('Database connection:', 'OK' if check_database_connection(mgr.get_engine()) else 'FAILED')"

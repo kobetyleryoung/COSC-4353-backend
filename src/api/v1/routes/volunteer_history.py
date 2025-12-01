@@ -1,12 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
+from datetime import datetime
 
 from src.services.volunteer_history import VolunteerHistoryService
 from src.domain.users import UserId
 from src.domain.events import EventId
 from src.domain.volunteering import VolunteerHistoryEntryId
+from src.repositories.database import get_uow, get_uow_manager
+from src.repositories.unit_of_work import UnitOfWorkManager
+from src.api.dependencies import get_or_create_user
 from ..schemas.volunteer_history import (
     HistoryEntryCreateSchema, HistoryEntryUpdateSchema, HistoryEntryResponseSchema,
     HistoryListResponseSchema, UserStatsResponseSchema, TopVolunteerResponseSchema,
@@ -18,14 +21,8 @@ router = APIRouter(prefix="/volunteer-history", tags=["volunteer-history"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1)
-def _get_history_service() -> VolunteerHistoryService:
-    return VolunteerHistoryService(logger)
+def _get_history_service(uow_manager: UnitOfWorkManager = Depends(get_uow_manager)) -> VolunteerHistoryService:
+    return VolunteerHistoryService(uow_manager, logger)
 
 
 def _convert_history_entry_to_response(entry) -> HistoryEntryResponseSchema:
@@ -131,15 +128,16 @@ async def get_event_history(
 @router.post("/", response_model=HistoryEntryResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_history_entry(
     entry_data: HistoryEntryCreateSchema,
-    history_service: VolunteerHistoryService = Depends(_get_history_service)
+    history_service: VolunteerHistoryService = Depends(_get_history_service),
+    uow=Depends(get_uow)
 ):
-    """Create a new volunteer history entry."""
+    """Create a new volunteer history entry. Frontend sends userId in request body."""
     try:
-        # In real app, get user_id from authenticated user
-        user_id = UserId.new()
+        # Get or create user based on userId from frontend
+        user = await get_or_create_user(entry_data.user_id, uow)
         
         entry = history_service.create_history_entry(
-            user_id=user_id,
+            user_id=user.id,
             event_id=EventId(entry_data.event_id),
             role=entry_data.role,
             hours=entry_data.hours,
@@ -248,7 +246,6 @@ async def get_user_hours_in_period(
 ):
     """Get volunteer hours for a user within a specific time period."""
     try:
-        from datetime import datetime
         start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
         end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         

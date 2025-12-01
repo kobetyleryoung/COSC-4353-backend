@@ -7,79 +7,15 @@ from logging import Logger
 from src.domain.volunteering import VolunteerHistoryEntry, VolunteerHistoryEntryId, Role
 from src.domain.events import EventId
 from src.domain.users import UserId
+from src.repositories.unit_of_work import UnitOfWorkManager
 
 
 class VolunteerHistoryService:
     """Service for tracking and displaying volunteer participation history."""
     
-    def __init__(self, logger: Logger):
+    def __init__(self, uow_manager: UnitOfWorkManager, logger: Logger):
+        self._uow_manager = uow_manager
         self._logger = logger
-        # Hard-coded data storage (no database implementation)
-        self._history_entries: dict[str, VolunteerHistoryEntry] = {}
-        self._initialize_sample_data()
-    
-    def _initialize_sample_data(self) -> None:
-        """Initialize with sample volunteer history entries."""
-        # Sample history entry 1
-        user1_id = UserId.new()
-        event1_id = EventId.new()
-        entry1_id = VolunteerHistoryEntryId.new()
-        entry1 = VolunteerHistoryEntry(
-            id=entry1_id,
-            user_id=user1_id,
-            event_id=event1_id,
-            role="General Volunteer",
-            hours=4.5,
-            date=datetime.now() - timedelta(days=30),
-            notes="Helped with park cleanup, very organized event"
-        )
-        self._history_entries[str(entry1_id.value)] = entry1
-        
-        # Sample history entry 2
-        user2_id = UserId.new()
-        event2_id = EventId.new()
-        entry2_id = VolunteerHistoryEntryId.new()
-        entry2 = VolunteerHistoryEntry(
-            id=entry2_id,
-            user_id=user2_id,
-            event_id=event2_id,
-            role="Team Leader",
-            hours=6.0,
-            date=datetime.now() - timedelta(days=45),
-            notes="Led a team of 5 volunteers in food distribution"
-        )
-        self._history_entries[str(entry2_id.value)] = entry2
-        
-        # Sample history entry 3 (same user as entry1, different event)
-        event3_id = EventId.new()
-        entry3_id = VolunteerHistoryEntryId.new()
-        entry3 = VolunteerHistoryEntry(
-            id=entry3_id,
-            user_id=user1_id,  # Same user as entry1
-            event_id=event3_id,
-            role="Assistant",
-            hours=3.0,
-            date=datetime.now() - timedelta(days=60),
-            notes="Assisted with senior center activities"
-        )
-        self._history_entries[str(entry3_id.value)] = entry3
-        
-        # Sample history entry 4
-        user3_id = UserId.new()
-        event4_id = EventId.new()
-        entry4_id = VolunteerHistoryEntryId.new()
-        entry4 = VolunteerHistoryEntry(
-            id=entry4_id,
-            user_id=user3_id,
-            event_id=event4_id,
-            role="Coordinator",
-            hours=8.0,
-            date=datetime.now() - timedelta(days=15),
-            notes="Coordinated logistics for community health fair"
-        )
-        self._history_entries[str(entry4_id.value)] = entry4
-        
-        self._logger.info(f"Initialized {len(self._history_entries)} sample volunteer history entries")
     
     def create_history_entry(
         self,
@@ -108,53 +44,44 @@ class VolunteerHistoryService:
         if notes and len(notes) > 1000:
             raise ValueError("Notes must be 1000 characters or less")
         
-        # Check for duplicate entry (same user, event, and date)
-        existing_entry = self._find_existing_entry(user_id, event_id, date)
-        if existing_entry:
-            raise ValueError("History entry already exists for this user, event, and date")
-        
-        # Create history entry
-        entry_id = VolunteerHistoryEntryId.new()
-        entry = VolunteerHistoryEntry(
-            id=entry_id,
-            user_id=user_id,
-            event_id=event_id,
-            role=role.strip(),
-            hours=hours,
-            date=date,
-            notes=notes.strip() if notes else None
-        )
-        
-        self._history_entries[str(entry_id.value)] = entry
-        self._logger.info(f"Created history entry for user {user_id.value}, event {event_id.value}")
-        
-        return entry
+        with self._uow_manager.get_uow() as uow:
+            # Check for duplicate entry (same user, event, and date)
+            existing_entry = self._find_existing_entry_in_uow(uow, user_id, event_id, date)
+            if existing_entry:
+                raise ValueError("History entry already exists for this user, event, and date")
+            
+            # Create history entry
+            entry_id = VolunteerHistoryEntryId.new()
+            entry = VolunteerHistoryEntry(
+                id=entry_id,
+                user_id=user_id,
+                event_id=event_id,
+                role=role.strip(),
+                hours=hours,
+                date=date,
+                notes=notes.strip() if notes else None
+            )
+            
+            uow.volunteer_history.add(entry)
+            uow.commit()
+            self._logger.info(f"Created history entry for user {user_id.value}, event {event_id.value}")
+            
+            return entry
     
     def get_history_entry_by_id(self, entry_id: VolunteerHistoryEntryId) -> Optional[VolunteerHistoryEntry]:
         """Retrieve a history entry by its ID."""
-        return self._history_entries.get(str(entry_id.value))
+        with self._uow_manager.get_uow() as uow:
+            return uow.volunteer_history.get_by_id(entry_id)
     
     def get_user_history(self, user_id: UserId) -> List[VolunteerHistoryEntry]:
         """Get all volunteer history entries for a specific user."""
-        user_entries = [
-            entry for entry in self._history_entries.values()
-            if entry.user_id.value == user_id.value
-        ]
-        
-        # Sort by date (most recent first)
-        user_entries.sort(key=lambda x: x.date, reverse=True)
-        return user_entries
+        with self._uow_manager.get_uow() as uow:
+            return uow.volunteer_history.get_by_user_id(user_id)
     
     def get_event_history(self, event_id: EventId) -> List[VolunteerHistoryEntry]:
         """Get all volunteer history entries for a specific event."""
-        event_entries = [
-            entry for entry in self._history_entries.values()
-            if entry.event_id.value == event_id.value
-        ]
-        
-        # Sort by date (most recent first)
-        event_entries.sort(key=lambda x: x.date, reverse=True)
-        return event_entries
+        with self._uow_manager.get_uow() as uow:
+            return uow.volunteer_history.get_by_event_id(event_id)
     
     def get_user_total_hours(self, user_id: UserId) -> float:
         """Calculate total volunteer hours for a user."""
@@ -194,20 +121,16 @@ class VolunteerHistoryService:
     def get_recent_history(self, days: int = 30) -> List[VolunteerHistoryEntry]:
         """Get volunteer history entries from the last N days."""
         cutoff_date = datetime.now() - timedelta(days=days)
-        recent_entries = [
-            entry for entry in self._history_entries.values()
-            if entry.date >= cutoff_date
-        ]
-        
-        # Sort by date (most recent first)
-        recent_entries.sort(key=lambda x: x.date, reverse=True)
-        return recent_entries
+        with self._uow_manager.get_uow() as uow:
+            return uow.volunteer_history.get_recent(days=days)
     
     def get_top_volunteers_by_hours(self, limit: int = 10) -> List[tuple[UserId, float]]:
         """Get top volunteers by total hours volunteered."""
+        with self._uow_manager.get_uow() as uow:
+            all_entries = uow.volunteer_history.list_all()
+            
         user_hours = {}
-        
-        for entry in self._history_entries.values():
+        for entry in all_entries:
             user_id = entry.user_id
             if user_id not in user_hours:
                 user_hours[user_id] = 0
@@ -219,9 +142,11 @@ class VolunteerHistoryService:
     
     def get_top_volunteers_by_events(self, limit: int = 10) -> List[tuple[UserId, int]]:
         """Get top volunteers by number of events participated in."""
+        with self._uow_manager.get_uow() as uow:
+            all_entries = uow.volunteer_history.list_all()
+            
         user_events = {}
-        
-        for entry in self._history_entries.values():
+        for entry in all_entries:
             user_id = entry.user_id
             if user_id not in user_events:
                 user_events[user_id] = set()
@@ -241,46 +166,52 @@ class VolunteerHistoryService:
         notes: Optional[str] = None
     ) -> Optional[VolunteerHistoryEntry]:
         """Update an existing history entry."""
-        entry = self.get_history_entry_by_id(entry_id)
-        if not entry:
-            return None
-        
-        # Validation for updates
-        if role is not None:
-            if not role or len(role.strip()) == 0:
-                raise ValueError("Role cannot be empty")
-            if len(role) > 100:
-                raise ValueError("Role must be 100 characters or less")
-            entry.role = role.strip()
-        
-        if hours is not None:
-            if hours <= 0:
-                raise ValueError("Hours must be greater than 0")
-            if hours > 24:
-                raise ValueError("Hours cannot exceed 24 for a single entry")
-            entry.hours = hours
-        
-        if date is not None:
-            if date > datetime.now():
-                raise ValueError("Date cannot be in the future")
-            entry.date = date
-        
-        if notes is not None:
-            if notes and len(notes) > 1000:
-                raise ValueError("Notes must be 1000 characters or less")
-            entry.notes = notes.strip() if notes else None
-        
-        self._logger.info(f"Updated history entry {entry_id.value}")
-        return entry
+        with self._uow_manager.get_uow() as uow:
+            entry = uow.volunteer_history.get_by_id(entry_id)
+            if not entry:
+                return None
+            
+            # Validation for updates
+            if role is not None:
+                if not role or len(role.strip()) == 0:
+                    raise ValueError("Role cannot be empty")
+                if len(role) > 100:
+                    raise ValueError("Role must be 100 characters or less")
+                entry.role = role.strip()
+            
+            if hours is not None:
+                if hours <= 0:
+                    raise ValueError("Hours must be greater than 0")
+                if hours > 24:
+                    raise ValueError("Hours cannot exceed 24 for a single entry")
+                entry.hours = hours
+            
+            if date is not None:
+                if date > datetime.now():
+                    raise ValueError("Date cannot be in the future")
+                entry.date = date
+            
+            if notes is not None:
+                if notes and len(notes) > 1000:
+                    raise ValueError("Notes must be 1000 characters or less")
+                entry.notes = notes.strip() if notes else None
+            
+            uow.volunteer_history.update(entry)
+            uow.commit()
+            self._logger.info(f"Updated history entry {entry_id.value}")
+            return entry
     
     def delete_history_entry(self, entry_id: VolunteerHistoryEntryId) -> bool:
         """Delete a volunteer history entry."""
-        if str(entry_id.value) not in self._history_entries:
-            return False
-        
-        entry = self._history_entries.pop(str(entry_id.value))
-        self._logger.info(f"Deleted history entry {entry_id.value} for user {entry.user_id.value}")
-        return True
+        with self._uow_manager.get_uow() as uow:
+            entry = uow.volunteer_history.get_by_id(entry_id)
+            if not entry:
+                return False
+            
+            uow.volunteer_history.delete(entry_id)
+            uow.commit()
+            self._logger.info(f"Deleted history entry {entry_id.value}")
+            return True
     
     def get_volunteer_statistics(self, user_id: UserId) -> dict:
         """Get comprehensive volunteer statistics for a user."""
@@ -332,16 +263,17 @@ class VolunteerHistoryService:
         
         return monthly_hours
     
-    def _find_existing_entry(
+    def _find_existing_entry_in_uow(
         self,
+        uow,
         user_id: UserId,
         event_id: EventId,
         date: datetime
     ) -> Optional[VolunteerHistoryEntry]:
         """Find if an entry already exists for the same user, event, and date."""
-        for entry in self._history_entries.values():
-            if (entry.user_id.value == user_id.value and
-                entry.event_id.value == event_id.value and
+        user_entries = uow.volunteer_history.get_by_user_id(user_id)
+        for entry in user_entries:
+            if (entry.event_id.value == event_id.value and
                 entry.date.date() == date.date()):  # Compare just the date part
                 return entry
         return None

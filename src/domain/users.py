@@ -23,5 +23,5 @@ class User:
     id: UserId
     email: str
     roles: Set[UserRole] = field(default_factory=set)
-    # Store password *hash* only if your domain really needs to reason about it
-    password_hash: str | None = None
+    # Auth0 subject identifier for linking to Auth0 user
+    auth0_sub: str | None = None

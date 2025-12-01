@@ -5,7 +5,8 @@ from uuid import UUID
 
 
 class HistoryEntryCreateSchema(BaseModel):
-    event_id: UUID = Field(..., description="Event ID")
+    user_id: str = Field(..., description="User ID (auth0 sub)")
+    event_id: str = Field(..., description="Event ID (UUID string)")
     role: str = Field(..., min_length=1, max_length=100, description="Volunteer role")
     hours: float = Field(..., gt=0, le=24, description="Hours volunteered")
     date: datetime = Field(..., description="Date of volunteer work")

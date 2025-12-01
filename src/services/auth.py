@@ -2,18 +2,10 @@ import jwt
 from jwt import PyJWKClient
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from config.settings import settings
-
-bearer = HTTPBearer()
-
-ISSUER = f"https://{settings.AUTH0_DOMAIN}/"
-JWKS_URL = f"{ISSUER}.well-known/jwks.json"
-ALGORITHMS = [settings.AUTH0_ALGORITHM]
-jwk_client = PyJWKClient(JWKS_URL)
+from src.config.settings import settings
 
 
-#TODO: cleanup, make sure issuer is good. May move the global vars somewhere else and inject them
-# into AuthProvider
+
 class AuthProvider:
     def __init__(self, domain: str, audience: str, algorithms: list[str]):
         self.issuer = f"https://{domain}/"

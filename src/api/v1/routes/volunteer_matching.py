@@ -1,13 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
-from functools import lru_cache
 
 from src.services.volunteer_matching import VolunteerMatchingService
 from src.services.profile_management import ProfileManagementService
-from src.domain.users import UserId
+from src.domain.users import UserId, User
 from src.domain.volunteering import OpportunityId, MatchRequestId, MatchId
 from src.domain.events import EventId
+from src.repositories.database import get_uow
+from src.repositories.unit_of_work import UnitOfWorkManager
+from src.api.dependencies import get_or_create_user
 from ..schemas.volunteer_matching import (
     OpportunityCreateSchema, OpportunityResponseSchema,
     MatchRequestCreateSchema, MatchRequestResponseSchema,
@@ -21,18 +23,11 @@ router = APIRouter(prefix="/volunteer-matching", tags=["volunteer-matching"])
 
 #region helpers
 
-#TODO: remove lru_cache once we hookup to database
-#lru_cache creates this as a singleton instead of per_request
-# we use the singleton for now since we have no database, just
-# test data we store in memory. Once we hookup to db we will go with
-# per instance
-@lru_cache(maxsize=1)
-def _get_matching_service() -> VolunteerMatchingService:
-    return VolunteerMatchingService(logger)
+def _get_matching_service(uow=Depends(get_uow)) -> VolunteerMatchingService:
+    return VolunteerMatchingService(logger, uow.opportunities, uow.matches, uow.match_requests)
 
-@lru_cache(maxsize=1)
-def _get_profile_service() -> ProfileManagementService:
-    return ProfileManagementService(logger)
+def _get_profile_service(uow=Depends(get_uow)) -> ProfileManagementService:
+    return ProfileManagementService(logger, uow.profiles)
 
 
 def _convert_opportunity_to_response(opportunity) -> OpportunityResponseSchema:
@@ -107,7 +102,7 @@ async def get_opportunity_by_id(
 ):
     """Get a specific opportunity by ID."""
     try:
-        opportunity = matching_service.get_opportunity_by_id(OpportunityId(opportunity_id))
+        opportunity = matching_service.get_opportunity(OpportunityId(opportunity_id))
         if not opportunity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -174,20 +169,27 @@ async def create_opportunity(
 
 @router.post("/match-requests", response_model=MatchRequestResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_match_request(
+    user_id: str,
     request_data: MatchRequestCreateSchema,
-    matching_service: VolunteerMatchingService = Depends(_get_matching_service)
+    matching_service: VolunteerMatchingService = Depends(_get_matching_service),
+    uow=Depends(get_uow)
 ):
-    """Create a match request for a volunteer to apply for an opportunity."""
+    """Create a match request for a user to apply for an opportunity. User ID provided as query parameter."""
     try:
-        # In real app, get user_id from authenticated user
-        user_id = UserId.new()
+        logger.info(f"create_match_request called with user_id parameter: {user_id}")
+        logger.info(f"request_data: {request_data}")
+        # Get or create user
+        user = await get_or_create_user(user_id, uow)
         
+        # Create match request using the user's ID
         match_request = matching_service.create_match_request(
-            user_id=user_id,
+            user_id=user.id,
             opportunity_id=OpportunityId(request_data.opportunity_id)
         )
         
         return _convert_match_request_to_response(match_request)
+    
+    #error handling
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -355,13 +357,19 @@ async def find_matching_volunteers(
     matching_service: VolunteerMatchingService = Depends(_get_matching_service),
     profile_service: ProfileManagementService = Depends(_get_profile_service)
 ):
-    """Find volunteers that match an opportunity."""
+    """Find volunteers that match an opportunity.
+    
+    NOTE: This endpoint is currently not fully functional due to database migration.
+    The ProfileRepository doesn't support listing all profiles.
+    Consider using a different approach like event-based matching or profile search.
+    """
     try:
-        profiles = profile_service.get_all_profiles()
-        matches = matching_service.find_matching_volunteers(
-            opportunity_id=OpportunityId(opportunity_id),
-            profiles=profiles,
-            min_score=min_score
+        # TODO: Replace with proper profile search/filtering once repository supports it
+        logger.warning("find_matching_volunteers endpoint called but profile listing not supported")
+        return MatchingVolunteersResponseSchema(
+            opportunity_id=opportunity_id,
+            matches=[],
+            total=0
         )
         
         volunteer_matches = []
@@ -399,13 +407,15 @@ async def find_matching_opportunities(
     matching_service: VolunteerMatchingService = Depends(_get_matching_service),
     profile_service: ProfileManagementService = Depends(_get_profile_service)
 ):
-    """Find opportunities that match a volunteer profile."""
+    """Find opportunities that match a volunteer profile. Returns empty list if no profile exists."""
     try:
         profile = profile_service.get_profile_by_user_id(UserId(user_id))
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User profile not found"
+            logger.info(f"Profile not found for user {user_id} when finding opportunities - returning empty matches")
+            # Return empty matches instead of 404 so frontend works gracefully
+            return MatchingOpportunitiesResponseSchema(
+                matches=[],
+                total=0
             )
         
         matches = matching_service.find_matching_opportunities(
