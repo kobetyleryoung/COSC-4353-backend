@@ -4,7 +4,7 @@ Reports service for generating volunteer management reports.
 Handles business logic for CSV and PDF report generation.
 """
 from __future__ import annotations
-from io import BytesIO
+from io import BytesIO, StringIO
 from datetime import datetime
 from typing import List, BinaryIO
 from logging import Logger
@@ -40,14 +40,9 @@ class ReportsService:
             # Get volunteer history entries
             entries = uow.volunteer_history.get_recent(days)
             
-            # Create CSV in memory
-            output = BytesIO()
-            output.write(b'\xef\xbb\xbf')  # UTF-8 BOM for Excel compatibility
-            
-            writer = csv.writer(
-                (line.decode('utf-8') for line in output),
-                lineterminator='\n'
-            )
+            # Create CSV in memory using StringIO
+            string_buffer = StringIO()
+            writer = csv.writer(string_buffer, lineterminator='\n')
             
             # Write header
             writer.writerow([
@@ -64,7 +59,7 @@ class ReportsService:
             for entry in entries:
                 date_str = entry.date.strftime('%Y-%m-%d') if isinstance(entry.date, datetime) else str(entry.date)
                 
-                row = [
+                writer.writerow([
                     str(entry.id.value),
                     str(entry.user_id.value),
                     str(entry.event_id.value),
@@ -72,13 +67,14 @@ class ReportsService:
                     str(entry.hours),
                     date_str,
                     entry.notes or ""
-                ]
-                
-                # Write row as bytes
-                csv_line = ','.join(f'"{field}"' if ',' in field else field for field in row) + '\n'
-                output.write(csv_line.encode('utf-8'))
+                ])
             
+            # Convert to BytesIO with UTF-8 BOM for Excel compatibility
+            output = BytesIO()
+            output.write(b'\xef\xbb\xbf')  # UTF-8 BOM
+            output.write(string_buffer.getvalue().encode('utf-8'))
             output.seek(0)
+            
             self._logger.info(f"Generated volunteer history CSV with {len(entries)} entries")
             
             return output

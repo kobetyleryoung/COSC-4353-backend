@@ -845,7 +845,7 @@ class SqlAlchemyVolunteerHistoryRepository:
         )
         return [self._model_to_domain(model) for model in entry_models]
     
-    def get_recent(self, *, days: int = 30) -> list[VolunteerHistoryEntry]:
+    def get_recent(self, days: int = 30) -> list[VolunteerHistoryEntry]:
         """Get recent volunteer history entries from the last N days."""
         from datetime import datetime, timedelta
         cutoff_date = datetime.now() - timedelta(days=days)
